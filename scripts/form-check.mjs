@@ -269,6 +269,7 @@ async function checkForm(browser, item) {
       await page.waitForTimeout(1000);
       if (!how && (await countThanks()) > thanksBefore) how = 'thank-you text appeared on page';
       const h = handlerCalls.length > handlersBefore ? handlerCalls.at(-1) : null;
+      if (!how && h && (h.result === 'mail_sent' || h.result === 'success')) how = `the form server (status ${h.result} - email sent)`;
       if (how) res.notes.push(`Test entry submitted - success confirmed by ${how}${h ? ` (server HTTP ${h.status})` : ''}`);
       else {
         const err = (await page.locator(ERROR_SEL).allInnerTexts().catch(() => [])).map((s) => s.trim()).filter(Boolean).slice(0, 3).join(' | ');
@@ -311,7 +312,8 @@ async function checkForm(browser, item) {
   } catch (e) {
     fail(`Check crashed: ${String(e.message || e).split('\n')[0].slice(0, 200)}`);
   } finally {
-    if (jsErrors.length) { res.jsErrors = jsErrors.slice(0, 5); warn(`${jsErrors.length} JavaScript error(s) on page: ${jsErrors[0]}`); }
+    // A JavaScript error elsewhere on the page is a site issue, not a form failure - note it, don't downgrade the form.
+    if (jsErrors.length) { res.jsErrors = jsErrors.slice(0, 5); res.notes.push(`Site issue (not the form): ${jsErrors.length} JavaScript error(s) on page - ${jsErrors[0]}`); }
     if (badRequests.length) { res.serverErrors = badRequests.slice(0, 5); warn(`${badRequests.length} server error(s) loading page resources`); }
     if (res.status !== 'pass') {
       const shot = `screens/${slug(item.name)}.png`;
