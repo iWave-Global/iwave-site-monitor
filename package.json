@@ -1,0 +1,12 @@
+{
+  "name": "iwave-site-monitor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "speed": "node scripts/speed-check.mjs",
+    "forms": "node scripts/form-check.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>iWave Global - Website Monitor</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --brand: #192547;
+    --page: #f3f4f6;
+    --surface-1: #fcfcfb;
+    --border: #e4e4e0;
+    --grid: #ecebe7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #7a7974;
+    --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
+    --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948;
+    --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+    --critical-tint: rgba(208, 59, 59, .10);
+  }
+  @media (prefers-color-scheme: dark) {
+    .viz-root {
+      color-scheme: dark;
+      --page: #111110; --surface-1: #1a1a19; --border: #2e2e2c; --grid: #2a2a28;
+      --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+      --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+      --series-5: #d55181; --series-6: #0ca30c; --series-7: #9085e9; --series-8: #e66767;
+      --critical-tint: rgba(208, 59, 59, .18);
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--page); color: var(--text-primary); }
+  header { background: var(--brand); color: #fff; padding: 16px 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 650; }
+  header .sub { font-size: 12px; opacity: .8; }
+  header .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  header a.btn { color: #fff; border: 1px solid rgba(255,255,255,.45); padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 13px; }
+  header a.btn:hover { background: rgba(255,255,255,.12); }
+  main { max-width: 1280px; margin: 0 auto; padding: 20px 24px 48px; }
+  .filters { display: flex; gap: 6px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .filters span { color: var(--text-secondary); margin-right: 4px; }
+  .seg button { border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); padding: 5px 12px; cursor: pointer; font: inherit; }
+  .seg button:first-child { border-radius: 6px 0 0 6px; } .seg button:last-child { border-radius: 0 6px 6px 0; }
+  .seg button + button { border-left: 0; }
+  .seg button[aria-pressed="true"] { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .tile .label { color: var(--text-secondary); font-size: 12px; }
+  .tile .value { font-size: 26px; font-weight: 650; margin: 2px 0; font-variant-numeric: tabular-nums; }
+  .tile .note { color: var(--text-muted); font-size: 12px; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--text-primary); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+  h2 { font-size: 15px; margin: 0 0 2px; }
+  .card .desc { color: var(--text-secondary); font-size: 12px; margin-bottom: 8px; }
+  .section { margin-bottom: 16px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-secondary); margin: 4px 0 6px; }
+  .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+  .chart { position: relative; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart text { fill: var(--text-muted); font-size: 11px; }
+  .tip { position: absolute; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; display: none; z-index: 5; }
+  .tip b { display: block; margin-bottom: 3px; }
+  .tip .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .tip .row span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--text-secondary); font-weight: 600; border-bottom: 1px solid var(--border); padding: 7px 8px; position: sticky; top: 0; background: var(--surface-1); }
+  td { border-bottom: 1px solid var(--grid); padding: 7px 8px; vertical-align: top; }
+  td:not(.muted) { white-space: nowrap; }
+  td.num { font-variant-numeric: tabular-nums; text-align: right; } th.num { text-align: right; }
+  .scroll { max-height: 420px; overflow: auto; }
+  .muted { color: var(--text-muted); }
+  .empty { color: var(--text-muted); padding: 24px 0; text-align: center; }
+  .forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  .form-card h3 { margin: 0 0 4px; font-size: 14px; }
+  .form-card ul { margin: 6px 0 0; padding-left: 18px; color: var(--text-secondary); font-size: 12px; }
+  .strip { display: flex; gap: 3px; margin-top: 8px; flex-wrap: wrap; }
+  th.sort { cursor: pointer; user-select: none; } th.sort:hover { color: var(--text-primary); }
+  .spark { display: block; }
+  .strip span { width: 10px; height: 18px; border-radius: 2px; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .toolbar button, .linkbtn { border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); border-radius: 6px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; text-decoration: none; }
+  label.chk { font-size: 12px; color: var(--text-secondary); display: inline-flex; gap: 5px; align-items: center; }
+  a { color: var(--series-1); }
+  footer { color: var(--text-muted); font-size: 12px; text-align: center; margin-top: 20px; }
+</style>
+</head>
+<body class="viz-root">
+<header>
+  <div>
+    <h1>iWave Global - Website Monitor</h1>
+    <div class="sub" id="lastUpdated">Loading…</div>
+  </div>
+  <div class="actions" id="actions"></div>
+</header>
+
+<main>
+  <div class="filters">
+    <span>Time range</span>
+    <div class="seg" id="range">
+      <button data-h="24">24 hours</button><button data-h="168" aria-pressed="true">7 days</button><button data-h="720">30 days</button><button data-h="2160">90 days</button>
+    </div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Server response time (TTFB)</h2>
+      <div class="desc">Seconds until the server starts sending the page, every hour: homepage vs. all product pages (typical = median, slowest 5% = 95th percentile). Red marks = homepage failed.</div>
+      <div id="chartTtfb" class="chart"></div>
+    </div>
+    <div class="card">
+      <h2>Google PageSpeed score</h2>
+      <div class="desc">Lighthouse performance score, 0-100 (90+ good, 50-89 needs work, under 50 poor).</div>
+      <div id="chartPsi" class="chart"></div>
+    </div>
+  </div>
+
+  <div class="card section">
+    <div class="toolbar">
+      <div><h2>Downtime &amp; issue log</h2><div class="desc" style="margin:0">Every outage with start, end, duration and the cause found. Times in IST.</div></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <label class="chk"><input type="checkbox" id="showProd" checked> Product page errors</label>
+        <label class="chk"><input type="checkbox" id="showSlow"> Slow-response &amp; brief-failure notes</label>
+        <button id="csvInc">Download CSV</button>
+      </div>
+    </div>
+    <div class="scroll" id="incidents"></div>
+  </div>
+
+  <div class="card section">
+    <div class="toolbar">
+      <div><h2>Contact &amp; download forms</h2><div class="desc" style="margin:0">Checked every 4 hours in a real browser. Strip = last 30 checks (newest on the right).</div></div>
+      <button id="csvForms">Download CSV</button>
+    </div>
+    <div class="forms" id="formCards"></div>
+    <div class="scroll" id="formLog"></div>
+  </div>
+
+  <div class="card section">
+    <div class="toolbar">
+      <div><h2>Product pages - hourly speed</h2><div class="desc" style="margin:0" id="prodDesc">Every product page from the sitemap, checked every hour.</div></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="prodSearch" type="search" placeholder="Search product…" style="border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:6px;padding:4px 8px;font:inherit;font-size:12px">
+        <div class="seg" id="prodFilter"><button data-f="all" aria-pressed="true">All</button><button data-f="slow">Slow</button><button data-f="fail">Failing</button></div>
+        <button id="csvProd">Download CSV</button>
+      </div>
+    </div>
+    <div class="scroll" id="prodTable" style="max-height:560px"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Uptime by page</h2>
+      <div class="desc">Share of hourly checks that succeeded in the selected range.</div>
+      <div id="pageTable"></div>
+    </div>
+    <div class="card">
+      <h2>Core Web Vitals (latest PageSpeed run)</h2>
+      <div class="desc">LCP under 2.5 s, TBT under 200 ms and CLS under 0.1 are "good".</div>
+      <div id="vitals"></div>
+    </div>
+  </div>
+
+  <div class="card section">
+    <div class="toolbar">
+      <div><h2>Hourly speed log</h2><div class="desc" style="margin:0">Every check, newest first.</div></div>
+      <button id="csvSpeed">Download CSV</button>
+    </div>
+    <div class="scroll" id="speedLog"></div>
+  </div>
+
+  <footer>Data refreshes automatically every 5 minutes. Hosted free on GitHub Pages; checks run on GitHub Actions.</footer>
+</main>
+
+<div class="tip" id="tip"></div>
+
+<script>
+const TZ = 'Asia/Kolkata';
+const SERIES = ['--series-1','--series-2','--series-3','--series-4','--series-5','--series-6','--series-7','--series-8'];
+const STATUS = { good: '--good', warning: '--warning', serious: '--serious', critical: '--critical' };
+const css = (v) => getComputedStyle(document.body).getPropertyValue(v).trim();
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmtT = (t, opt = {}) => new Date(t).toLocaleString('en-IN', { timeZone: TZ, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, ...opt });
+const fmtDur = (m) => m == null ? '' : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${Math.floor(m / 1440)} d ${Math.floor((m % 1440) / 60)} h`;
+const badge = (level, text) => `<span class="badge"><span class="dot" style="background:var(${STATUS[level]})"></span>${level === 'good' ? '✓' : level === 'critical' ? '✕' : '!'} ${esc(text)}</span>`;
+const scoreLevel = (s) => s == null ? null : s >= 90 ? 'good' : s >= 50 ? 'warning' : 'critical';
+
+let DATA = { speed: [], incidents: [], forms: [], prodHist: [], prodPages: { t: [], pages: {}, psi: {} } };
+let PROD_FILTER = 'all', PROD_SORT = { key: 'now', dir: -1 };
+let RANGE_H = 168;
+
+// ---------- GitHub links (derived from the GitHub Pages address) ----------
+(function links() {
+  const m = location.hostname.match(/^([^.]+)\.github\.io$/);
+  const repo = location.pathname.split('/').filter(Boolean)[0];
+  if (!m || !repo) return;
+  const base = `https://github.com/${m[1]}/${repo}`;
+  $('actions').innerHTML = `
+    <a class="btn" target="_blank" rel="noopener" href="${base}/actions/workflows/speed-check.yml">▶ Run speed check now</a>
+    <a class="btn" target="_blank" rel="noopener" href="${base}/actions/workflows/form-check.yml">▶ Run form check now</a>
+    <a class="btn" target="_blank" rel="noopener" href="${base}/actions">All run history</a>
+    <a class="btn" target="_blank" rel="noopener" href="${base}/edit/main/config.json">Edit pages &amp; forms</a>`;
+})();
+
+// ---------- data ----------
+async function load() {
+  const get = (f) => fetch(`data/${f}?v=${Date.now()}`).then((r) => r.ok ? r.json() : []).catch(() => []);
+  const [speed, incidents, forms, prodHist, prodPages] = await Promise.all([get('speed.json'), get('incidents.json'), get('forms.json'), get('products-history.json'), get('products-pages.json')]);
+  DATA = { speed, incidents, forms, prodHist: Array.isArray(prodHist) ? prodHist : [], prodPages: prodPages && prodPages.t ? prodPages : { t: [], pages: {}, psi: {} } };
+  render();
+}
+
+function inRange(t) { return Date.parse(t) >= Date.now() - RANGE_H * 3600e3; }
+
+// ---------- render ----------
+function render() {
+  const runs = DATA.speed.filter((r) => inRange(r.t));
+  const last = DATA.speed.at(-1);
+  const lastForm = DATA.forms.at(-1);
+  $('lastUpdated').textContent = last
+    ? `Last speed check ${fmtT(last.t)} IST${lastForm ? ` · last form check ${fmtT(lastForm.t)} IST` : ''}`
+    : 'No checks recorded yet - run the speed check once from GitHub Actions.';
+  renderTiles(runs, last, lastForm);
+  renderTtfb(runs);
+  renderPsi(runs);
+  renderIncidents();
+  renderForms();
+  renderProducts();
+  renderPages(runs);
+  renderVitals();
+  renderSpeedLog(runs);
+}
+
+function renderTiles(runs, last, lastForm) {
+  const checks = runs.flatMap((r) => r.checks);
+  const ok = checks.filter((c) => c.ok).length;
+  const uptime = checks.length ? (ok / checks.length) * 100 : null;
+  const down = last ? last.checks.filter((c) => !c.ok) : [];
+  const open = DATA.incidents.filter((i) => i.type === 'down' && !i.end);
+  // Site downtime = union of outage periods across pages (overlaps counted once).
+  const iv = DATA.incidents.filter((i) => i.type === 'down' && (inRange(i.start) || !i.end))
+    .map((i) => [Math.max(Date.parse(i.start), Date.now() - RANGE_H * 3600e3), i.end ? Date.parse(i.end) : Date.now()]).sort((a, b) => a[0] - b[0]);
+  let downMs = 0, cur = null;
+  for (const [a, b] of iv) { if (!cur || a > cur[1]) { if (cur) downMs += cur[1] - cur[0]; cur = [a, b]; } else cur[1] = Math.max(cur[1], b); }
+  if (cur) downMs += cur[1] - cur[0];
+  const downMin = Math.round(downMs / 60000);
+  const home = runs.map((r) => r.checks[0]).filter((c) => c && c.ok && c.ttfb != null);
+  const avg = home.length ? home.reduce((s, c) => s + c.ttfb, 0) / home.length : null;
+  const latestPsi = (st) => [...DATA.speed].reverse().flatMap((r) => r.psi || []).find((p) => p.strategy === st && p.score != null);
+  const mob = latestPsi('mobile'), desk = latestPsi('desktop');
+  const fr = lastForm ? lastForm.results : [];
+  const lp = DATA.prodHist.at(-1);
+  const fPass = fr.filter((r) => r.status === 'pass').length, fFail = fr.filter((r) => r.status === 'fail').length;
+  const uLevel = uptime == null ? null : uptime >= 99.5 ? 'good' : uptime >= 97 ? 'warning' : 'critical';
+  const tiles = [
+    { label: 'Site status now', value: !last ? '-' : down.length ? 'DOWN' : 'UP',
+      note: !last ? 'waiting for first check' : down.length ? badge('critical', down.map((c) => c.name).join(', ')) : badge('good', `all ${last.checks.length} pages responding`) },
+    { label: `Uptime (${rangeLabel()})`, value: uptime == null ? '-' : uptime.toFixed(2) + '%', note: uLevel ? badge(uLevel, `${ok}/${checks.length} checks OK`) : '' },
+    { label: `Downtime (${rangeLabel()})`, value: fmtDur(downMin) || '0 min', note: open.length ? badge('critical', `${open.length} outage ongoing`) : badge('good', 'no ongoing outage') },
+    { label: `Avg home response (${rangeLabel()})`, value: avg == null ? '-' : avg.toFixed(2) + ' s',
+      note: avg == null ? '' : badge(avg <= 0.8 ? 'good' : avg <= 3 ? 'warning' : 'critical', avg <= 0.8 ? 'fast' : avg <= 3 ? 'acceptable' : 'slow') },
+    { label: 'PageSpeed mobile', value: mob ? mob.score : '-', note: mob ? badge(scoreLevel(mob.score), `LCP ${mob.lcp}s`) : '' },
+    { label: 'PageSpeed desktop', value: desk ? desk.score : '-', note: desk ? badge(scoreLevel(desk.score), `LCP ${desk.lcp}s`) : '' },
+    ...(lp ? [{ label: 'Product pages (last check)', value: `${lp.ok}/${lp.n}`, note: lp.fail ? badge('critical', `${lp.fail} failing`) : lp.slow ? badge('warning', `all up · ${lp.slow} slow`) : badge('good', 'all up, none slow') },
+      { label: 'Product typical response', value: lp.median != null ? lp.median.toFixed(2) + ' s' : '-', note: lp.p95 != null ? badge(lp.p95 <= 1 ? 'good' : lp.p95 <= 3 ? 'warning' : 'critical', `slowest 5%: ${lp.p95.toFixed(2)} s`) : '' }] : []),
+    { label: 'Forms (last check)', value: fr.length ? `${fPass}/${fr.length}` : '-',
+      note: !fr.length ? 'waiting for first check' : fFail ? badge('critical', `${fFail} broken`) : fPass === fr.length ? badge('good', 'all working') : badge('warning', 'check warnings') },
+  ];
+  $('tiles').innerHTML = tiles.map((t) => `<div class="card tile"><div class="label">${t.label}</div><div class="value">${t.value}</div><div class="note">${t.note}</div></div>`).join('');
+}
+function rangeLabel() { return { 24: '24 h', 168: '7 d', 720: '30 d', 2160: '90 d' }[RANGE_H]; }
+
+function renderTtfb(runs) {
+  const names = [...new Set(DATA.speed.flatMap((r) => r.checks.map((c) => c.name)))];
+  const series = names.slice(0, 8).map((n, i) => ({
+    name: n, color: css(SERIES[i]),
+    points: runs.map((r) => { const c = r.checks.find((x) => x.name === n); return [Date.parse(r.t), c && c.ok ? c.ttfb : null, c]; }),
+  }));
+  const ph = DATA.prodHist.filter((r) => inRange(r.t));
+  if (ph.length) {
+    const k = series.length;
+    series.push({ name: 'Product pages (typical)', color: css(SERIES[k]), points: ph.map((r) => [Date.parse(r.t), r.median, null]) });
+    series.push({ name: 'Product pages (slowest 5%)', color: css(SERIES[k + 1]), points: ph.map((r) => [Date.parse(r.t), r.p95, null]) });
+  }
+  const fails = runs.flatMap((r) => r.checks.filter((c) => !c.ok).map((c) => ({ t: Date.parse(r.t), label: `${c.name}: ${c.issue}` })));
+  lineChart($('chartTtfb'), { series, unit: 's', digits: 2, fails, threshold: 3, thresholdLabel: 'slow (3 s)' });
+}
+
+function renderPsi(runs) {
+  const mk = (st, i) => ({ name: st[0].toUpperCase() + st.slice(1), color: css(SERIES[i]),
+    points: runs.map((r) => { const p = (r.psi || []).find((x) => x.strategy === st && x.score != null); return [Date.parse(r.t), p ? p.score : null, p]; }).filter((p) => p[1] != null) });
+  lineChart($('chartPsi'), { series: [mk('mobile', 0), mk('desktop', 1)], unit: '', digits: 0, yMin: 0, yMax: 100, extra: (p) => p ? `LCP ${p.lcp}s · TBT ${p.tbt}ms` : '' });
+}
+
+// ---------- generic line chart (SVG, crosshair + tooltip) ----------
+function lineChart(el, o) {
+  const W = 620, H = 250, m = { l: 44, r: 12, t: 10, b: 28 };
+  const all = o.series.flatMap((s) => s.points.filter((p) => p[1] != null));
+  if (!all.length) { el.innerHTML = '<div class="empty">No data in this range yet.</div>'; return; }
+  const ts = [...new Set(o.series.flatMap((s) => s.points.map((p) => p[0])))].sort((a, b) => a - b);
+  const x0 = ts[0], x1 = ts.at(-1) === ts[0] ? ts[0] + 3600e3 : ts.at(-1);
+  let yMax = o.yMax ?? Math.max(...all.map((p) => p[1]), o.threshold ? o.threshold * 1.1 : 0) * 1.08;
+  const yMin = o.yMin ?? 0;
+  const step = niceStep((yMax - yMin) / 4); if (o.yMax == null) yMax = Math.ceil(yMax / step) * step;
+  const X = (t) => m.l + ((t - x0) / (x1 - x0)) * (W - m.l - m.r);
+  const Y = (v) => H - m.b - ((v - yMin) / (yMax - yMin)) * (H - m.t - m.b);
+  let g = '';
+  for (let v = yMin; v <= yMax + 1e-9; v += step) g += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end">${+v.toFixed(2)}${o.unit}</text>`;
+  const spanH = (x1 - x0) / 3600e3, nt = 5;
+  for (let i = 0; i <= nt; i++) { const t = x0 + ((x1 - x0) * i) / nt; g += `<text x="${X(t)}" y="${H - 8}" text-anchor="${i === 0 ? 'start' : i === nt ? 'end' : 'middle'}">${spanH <= 30 ? fmtT(t, { day: undefined, month: undefined }) : fmtT(t, { hour: undefined, minute: undefined })}</text>`; }
+  if (o.threshold && o.threshold < yMax) g += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(o.threshold)}" y2="${Y(o.threshold)}" stroke="var(--text-muted)" stroke-dasharray="4 4"/><text x="${W - m.r}" y="${Y(o.threshold) - 4}" text-anchor="end">${o.thresholdLabel}</text>`;
+  (o.fails || []).forEach((f) => { g += `<rect x="${X(f.t) - 2}" y="${H - m.b - 8}" width="4" height="8" rx="1" fill="var(--critical)"/>`; });
+  const sparse = ts.length <= 48;
+  o.series.forEach((s) => {
+    let d = '', pen = false;
+    s.points.forEach((p) => { if (p[1] == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`; pen = true; });
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    if (sparse) s.points.forEach((p) => { if (p[1] != null) g += `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="3" fill="${s.color}" stroke="var(--surface-1)" stroke-width="1.5"/>`; });
+  });
+  const legend = o.series.length > 1 ? `<div class="legend">${o.series.map((s) => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>` : '';
+  el.innerHTML = `${legend}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="line chart">${g}<line class="xh" y1="${m.t}" y2="${H - m.b}" stroke="var(--text-muted)" stroke-width="1" visibility="hidden"/><g class="hl"></g><rect class="hit" x="${m.l}" y="0" width="${W - m.l - m.r}" height="${H}" fill="transparent"/></svg>`;
+  const svg = el.querySelector('svg'), xh = svg.querySelector('.xh'), hl = svg.querySelector('.hl'), tip = $('tip');
+  svg.querySelector('.hit').addEventListener('mousemove', (e) => {
+    const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+    const lx = pt.matrixTransform(svg.getScreenCTM().inverse()).x;
+    const t = x0 + ((lx - m.l) / (W - m.l - m.r)) * (x1 - x0);
+    const near = ts.reduce((a, b) => Math.abs(b - t) < Math.abs(a - t) ? b : a);
+    xh.setAttribute('x1', X(near)); xh.setAttribute('x2', X(near)); xh.setAttribute('visibility', 'visible');
+    let rows = '', dots = '';
+    o.series.forEach((s) => {
+      const p = s.points.find((q) => q[0] === near); if (!p) return;
+      const val = p[1] == null ? (p[2] && !p[2].ok ? (p[2].issue || 'failed') : '-') : p[1].toFixed(o.digits) + o.unit;
+      rows += `<div class="row"><span><span class="dot" style="background:${s.color}"></span> ${esc(s.name)}</span><span>${esc(val)}</span></div>`;
+      if (o.extra && p[2]) rows += `<div class="muted" style="font-size:11px;margin:-1px 0 3px 17px">${esc(o.extra(p[2]))}</div>`;
+      if (p[1] != null) dots += `<circle cx="${X(near)}" cy="${Y(p[1])}" r="4.5" fill="${s.color}" stroke="var(--surface-1)" stroke-width="2"/>`;
+    });
+    hl.innerHTML = dots;
+    tip.innerHTML = `<b>${fmtT(near)} IST</b>${rows}`;
+    tip.style.display = 'block';
+    const tw = tip.offsetWidth, x = e.pageX + 14 + tw > window.scrollX + innerWidth ? e.pageX - tw - 14 : e.pageX + 14;
+    tip.style.left = x + 'px'; tip.style.top = e.pageY + 12 + 'px';
+  });
+  svg.querySelector('.hit').addEventListener('mouseleave', () => { tip.style.display = 'none'; xh.setAttribute('visibility', 'hidden'); hl.innerHTML = ''; });
+}
+function niceStep(raw) { const p = 10 ** Math.floor(Math.log10(raw || 1)); const n = raw / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
+
+// ---------- tables ----------
+function incidentRows() {
+  const showSlow = $('showSlow').checked, showProd = $('showProd').checked;
+  return DATA.incidents.filter((i) => (i.type === 'down' || (showProd && i.type === 'product') || (showSlow && (i.type === 'slow' || i.type === 'flaky'))) && (inRange(i.start) || !i.end)).sort((a, b) => Date.parse(b.start) - Date.parse(a.start));
+}
+function renderIncidents() {
+  const rows = incidentRows();
+  if (!rows.length) { $('incidents').innerHTML = '<div class="empty">No downtime or issues recorded in this range. 🎉</div>'; return; }
+  const isOut = (i) => i.type === 'down' || i.type === 'product';
+  const typeBadge = (i) => isOut(i) ? (i.end ? badge('serious', i.type === 'product' ? 'Product page error (resolved)' : 'Outage (resolved)') : badge('critical', i.type === 'product' ? 'Product page error now' : 'DOWN now')) : i.type === 'slow' ? badge('warning', 'Slow') : badge('warning', 'Brief failure');
+  $('incidents').innerHTML = `<table><thead><tr><th>Type</th><th>Page</th><th>Started (IST)</th><th>Ended (IST)</th><th class="num">Duration</th><th>Issue</th><th>What it means / where to look</th></tr></thead><tbody>${rows.map((i) => `
+    <tr><td>${typeBadge(i)}</td><td><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.name)}</a></td><td>${fmtT(i.start)}</td>
+    <td>${!isOut(i) ? '<span class="muted">-</span>' : i.end ? fmtT(i.end) : '<b>ongoing</b>'}</td>
+    <td class="num">${!isOut(i) ? '' : i.end ? '~' + fmtDur(i.durationMin) : fmtDur(Math.round((Date.now() - Date.parse(i.start)) / 60000)) + '+'}</td>
+    <td>${esc((i.issues || [i.issue]).join(', '))}</td><td class="muted">${esc(i.detail)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function renderForms() {
+  const runs = DATA.forms;
+  if (!runs.length) { $('formCards').innerHTML = '<div class="empty">No form checks yet - run the form check once from GitHub Actions.</div>'; $('formLog').innerHTML = ''; return; }
+  const last = runs.at(-1);
+  const lvl = { pass: 'good', warn: 'warning', fail: 'critical' }, lbl = { pass: 'Working', warn: 'Warning', fail: 'Broken' };
+  $('formCards').innerHTML = last.results.map((r) => {
+    const hist = runs.slice(-30).map((run) => { const x = run.results.find((y) => y.name === r.name); return x ? `<span title="${fmtT(run.t)} - ${lbl[x.status]}" style="background:var(${STATUS[lvl[x.status]]})"></span>` : ''; }).join('');
+    const items = [...r.issues, ...r.notes].map((s) => `<li>${esc(s)}</li>`).join('');
+    return `<div class="card form-card"><h3>${esc(r.name)}</h3>${badge(lvl[r.status], lbl[r.status])}
+      <div class="muted" style="font-size:12px;margin-top:4px">${r.plugin ? esc(r.plugin) + ' form · ' : ''}${r.fieldCount != null ? r.fieldCount + ' fields · ' : ''}${r.mode === 'submit' ? 'real test submit' : 'safe check'}${r.loadSec ? ' · page ' + r.loadSec + ' s' : ''}</div>
+      <ul>${items}</ul>${r.screenshot ? `<a class="linkbtn" style="display:inline-block;margin-top:8px" href="data/${esc(r.screenshot)}" target="_blank">View screenshot</a>` : ''}
+      <div class="strip">${hist}</div></div>`;
+  }).join('');
+  const recent = runs.filter((r) => inRange(r.t)).slice().reverse();
+  $('formLog').innerHTML = !recent.length ? '' : `<table><thead><tr><th>Checked (IST)</th><th>Form</th><th>Result</th><th>Issues / notes</th></tr></thead><tbody>${recent.flatMap((run) => run.results.map((r) =>
+    `<tr><td>${fmtT(run.t)}</td><td>${esc(r.name)}</td><td>${badge(lvl[r.status], lbl[r.status])}</td><td class="muted">${esc([...r.issues, ...r.notes].join(' · '))}</td></tr>`)).join('')}</tbody></table>`;
+}
+
+function renderPages(runs) {
+  const names = [...new Set(runs.flatMap((r) => r.checks.map((c) => c.name)))];
+  if (!names.length) { $('pageTable').innerHTML = '<div class="empty">No data yet.</div>'; return; }
+  $('pageTable').innerHTML = `<table><thead><tr><th>Page</th><th class="num">Uptime</th><th class="num">Avg TTFB</th><th class="num">Slowest</th><th class="num">Failed checks</th></tr></thead><tbody>${names.map((n) => {
+    const cs = runs.map((r) => r.checks.find((c) => c.name === n)).filter(Boolean);
+    const ok = cs.filter((c) => c.ok), t = ok.map((c) => c.ttfb).filter((v) => v != null);
+    const up = (ok.length / cs.length) * 100;
+    return `<tr><td>${esc(n)}</td><td class="num">${badge(up >= 99.5 ? 'good' : up >= 97 ? 'warning' : 'critical', up.toFixed(2) + '%')}</td><td class="num">${t.length ? (t.reduce((a, b) => a + b, 0) / t.length).toFixed(2) + ' s' : '-'}</td><td class="num">${t.length ? Math.max(...t).toFixed(2) + ' s' : '-'}</td><td class="num">${cs.length - ok.length}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function renderVitals() {
+  const run = [...DATA.speed].reverse().find((r) => (r.psi || []).some((p) => p.score != null));
+  if (!run) { $('vitals').innerHTML = '<div class="empty">No PageSpeed results yet. Add a free PSI_API_KEY secret if results show errors.</div>'; return; }
+  const lv = (v, g, p) => v == null ? null : v <= g ? 'good' : v <= p ? 'warning' : 'critical';
+  $('vitals').innerHTML = `<div class="muted" style="font-size:12px;margin-bottom:6px">Run ${fmtT(run.t)} IST</div><table><thead><tr><th>Device</th><th class="num">Score</th><th class="num">LCP</th><th class="num">FCP</th><th class="num">TBT</th><th class="num">CLS</th><th class="num">Server</th></tr></thead><tbody>${run.psi.map((p) => p.error
+    ? `<tr><td>${esc(p.strategy)}</td><td colspan="6" class="muted">Error: ${esc(p.error)}</td></tr>`
+    : `<tr><td>${esc(p.strategy)}</td><td class="num">${badge(scoreLevel(p.score), p.score)}</td><td class="num">${badge(lv(p.lcp, 2.5, 4), p.lcp + ' s')}</td><td class="num">${p.fcp} s</td><td class="num">${badge(lv(p.tbt, 200, 600), p.tbt + ' ms')}</td><td class="num">${badge(lv(p.cls, 0.1, 0.25), p.cls)}</td><td class="num">${p.serverMs} ms</td></tr>`).join('')}</tbody></table>`;
+}
+
+function renderSpeedLog(runs) {
+  const rows = runs.slice().reverse().slice(0, 500);
+  if (!rows.length) { $('speedLog').innerHTML = '<div class="empty">No checks in this range yet.</div>'; return; }
+  $('speedLog').innerHTML = `<table><thead><tr><th>Time (IST)</th><th>Page</th><th class="num">HTTP</th><th class="num">TTFB</th><th class="num">Total</th><th class="num">Size</th><th>Cache</th><th>Result</th></tr></thead><tbody>${rows.flatMap((r) => r.checks.map((c) =>
+    `<tr><td>${fmtT(r.t)}</td><td>${esc(c.name)}</td><td class="num">${c.status || '-'}</td><td class="num">${c.ttfb != null ? c.ttfb.toFixed(2) + ' s' : '-'}</td><td class="num">${c.total != null ? c.total.toFixed(2) + ' s' : '-'}</td><td class="num">${c.size ? (c.size / 1024).toFixed(0) + ' KB' : '-'}</td><td>${esc(c.cache || '-')}</td>
+     <td>${!c.ok ? badge('critical', c.issue) : c.slow ? badge('warning', 'Slow') : c.flaky ? badge('warning', 'Retry OK') : badge('good', 'OK')}</td></tr>`)).join('')}</tbody></table>`;
+}
+
+// ---------- product pages ----------
+function productRows() {
+  const H = DATA.prodPages, hrs = Math.min(RANGE_H, H.t.length);
+  const from = Math.max(0, H.t.length - hrs);
+  return Object.entries(H.pages).map(([url, p]) => {
+    const tt = p.ttfb.slice(from), st = p.st.slice(from);
+    const okv = tt.filter((v) => v != null);
+    const checks = st.filter((v) => v != null).length;
+    return {
+      url, name: p.name, now: p.ttfb.at(-1), st: p.st.at(-1), cache: p.c.at(-1), issue: p.issue, detail: p.detail,
+      avg: okv.length ? +(okv.reduce((a, b) => a + b, 0) / okv.length).toFixed(3) : null, max: okv.length ? Math.max(...okv) : null,
+      up: checks ? +((okv.length / checks) * 100).toFixed(1) : null, spark: p.ttfb.slice(-24), psi: H.psi[url],
+    };
+  });
+}
+function spark(vals) {
+  const w = 90, h = 22, v = vals.filter((x) => x != null); if (!v.length) return '';
+  const max = Math.max(...v, 1), step = w / Math.max(1, vals.length - 1);
+  let d = '', pen = false, fails = '';
+  vals.forEach((x, i) => { if (x == null) { pen = false; fails += `<rect x="${i * step - 1.5}" y="${h - 4}" width="3" height="4" fill="var(--critical)"/>`; return; } d += `${pen ? 'L' : 'M'}${(i * step).toFixed(1)},${(h - 2 - (x / max) * (h - 6)).toFixed(1)}`; pen = true; });
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}" fill="none" stroke="${css('--series-1')}" stroke-width="1.5" stroke-linejoin="round"/>${fails}</svg>`;
+}
+function renderProducts() {
+  const H = DATA.prodPages, lp = DATA.prodHist.at(-1);
+  if (!Object.keys(H.pages).length) { $('prodTable').innerHTML = '<div class="empty">No product pages checked yet - they appear after the next hourly speed check.</div>'; return; }
+  $('prodDesc').textContent = `${Object.keys(H.pages).length} product pages from the sitemap, checked every hour${lp ? ` · last check ${fmtT(lp.t)} IST` : ''}. Columns cover the selected range (max 7 days); trend = last 24 checks. Click a column to sort.${lp?.error ? ' ⚠ ' + lp.error : ''}`;
+  const q = $('prodSearch').value.trim().toLowerCase();
+  let rows = productRows().filter((r) => (!q || (r.name + ' ' + r.url).toLowerCase().includes(q)) &&
+    (PROD_FILTER === 'all' || (PROD_FILTER === 'slow' && r.now != null && r.now > 3) || (PROD_FILTER === 'fail' && r.now == null)));
+  const k = PROD_SORT.key, dir = PROD_SORT.dir;
+  const val = (r) => k === 'psi' ? r.psi?.score : k === 'name' ? r.name.toLowerCase() : r[k];
+  rows.sort((a, b) => { const x = val(a), y = val(b); if (x == null && y == null) return 0; if (x == null) return k === 'now' ? -1 : 1; if (y == null) return k === 'now' ? 1 : -1; return x < y ? -dir : x > y ? dir : 0; });
+  const th = (key, label, num) => `<th class="sort${num ? ' num' : ''}" data-k="${key}">${label}${PROD_SORT.key === key ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
+  const lvl = (t) => t == null ? null : t <= 1 ? 'good' : t <= 3 ? 'warning' : 'critical';
+  $('prodTable').innerHTML = !rows.length ? '<div class="empty">No product pages match.</div>' : `<table><thead><tr>${th('name', 'Product')}${th('now', 'Latest', 1)}${th('avg', 'Average', 1)}${th('max', 'Slowest', 1)}${th('up', 'Uptime', 1)}<th>Cache</th>${th('psi', 'PageSpeed (mobile)', 1)}<th>Trend (24 h)</th><th>Issue</th></tr></thead><tbody>${rows.map((r) => `
+    <tr><td><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a></td>
+    <td class="num">${r.now == null ? badge('critical', 'HTTP ' + (r.st || 'error')) : badge(lvl(r.now), r.now.toFixed(2) + ' s')}</td>
+    <td class="num">${r.avg != null ? r.avg.toFixed(2) + ' s' : '-'}</td><td class="num">${r.max != null ? r.max.toFixed(2) + ' s' : '-'}</td>
+    <td class="num">${r.up != null ? r.up + '%' : '-'}</td><td>${esc(r.cache || '-')}</td>
+    <td class="num">${r.psi?.score != null ? `<span title="checked ${fmtT(r.psi.t)} · LCP ${r.psi.lcp}s">${badge(scoreLevel(r.psi.score), r.psi.score)}</span>` : r.psi?.error ? '<span class="muted" title="' + esc(r.psi.error) + '">error</span>' : '<span class="muted">queued</span>'}</td>
+    <td>${spark(r.spark)}</td><td class="muted">${esc(r.issue ? r.issue : '')}</td></tr>`).join('')}</tbody></table>`;
+}
+
+// ---------- CSV ----------
+function csv(name, header, rows) {
+  const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const blob = new Blob([[header, ...rows].map((r) => r.map(q).join(',')).join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+}
+$('csvInc').onclick = () => csv('downtime-log.csv', ['type', 'page', 'url', 'start_ist', 'end_ist', 'duration_min', 'issue', 'detail'],
+  incidentRows().map((i) => [i.type, i.name, i.url, fmtT(i.start, { year: 'numeric' }), i.end ? fmtT(i.end, { year: 'numeric' }) : 'ongoing', i.durationMin, (i.issues || [i.issue]).join('; '), i.detail]));
+$('csvSpeed').onclick = () => csv('speed-log.csv', ['time_ist', 'page', 'url', 'http', 'dns_s', 'connect_s', 'tls_s', 'ttfb_s', 'total_s', 'bytes', 'cache', 'ok', 'issue', 'psi_mobile', 'psi_desktop'],
+  DATA.speed.filter((r) => inRange(r.t)).flatMap((r) => r.checks.map((c) => [fmtT(r.t, { year: 'numeric' }), c.name, c.url, c.status, c.dns, c.connect, c.tls, c.ttfb, c.total, c.size, c.cache, c.ok, c.issue,
+    (r.psi || []).find((p) => p.strategy === 'mobile')?.score, (r.psi || []).find((p) => p.strategy === 'desktop')?.score])));
+$('csvForms').onclick = () => csv('form-checks.csv', ['time_ist', 'form', 'url', 'result', 'mode', 'issues', 'notes'],
+  DATA.forms.filter((r) => inRange(r.t)).flatMap((run) => run.results.map((r) => [fmtT(run.t, { year: 'numeric' }), r.name, r.url, r.status, r.mode, r.issues.join('; '), r.notes.join('; ')])));
+
+// ---------- controls ----------
+$('range').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  RANGE_H = +b.dataset.h;
+  $('range').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b));
+  render();
+});
+$('showSlow').addEventListener('change', renderIncidents);
+$('showProd').addEventListener('change', renderIncidents);
+$('prodSearch').addEventListener('input', renderProducts);
+$('prodFilter').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  PROD_FILTER = b.dataset.f; $('prodFilter').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); renderProducts();
+});
+$('prodTable').addEventListener('click', (e) => {
+  const th = e.target.closest('th.sort'); if (!th) return;
+  PROD_SORT = { key: th.dataset.k, dir: PROD_SORT.key === th.dataset.k ? -PROD_SORT.dir : (th.dataset.k === 'name' ? 1 : -1) }; renderProducts();
+});
+$('csvProd').onclick = () => csv('product-pages-speed.csv', ['product', 'url', 'latest_ttfb_s', 'avg_ttfb_s', 'slowest_ttfb_s', 'uptime_pct', 'cache', 'http', 'issue', 'pagespeed_mobile', 'pagespeed_checked_ist'],
+  productRows().map((r) => [r.name, r.url, r.now, r.avg, r.max, r.up, r.cache, r.st, r.issue, r.psi?.score, r.psi?.t ? fmtT(r.psi.t, { year: 'numeric' }) : '']));
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
+load();
+setInterval(load, 5 * 60e3);
+</script>
+</body>
+</html>

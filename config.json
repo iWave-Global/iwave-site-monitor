@@ -1,0 +1,55 @@
+{
+  "siteName": "iWave Global",
+  "displayTimezone": "Asia/Kolkata",
+
+  "speed": {
+    "_comment": "Checked every hour. mustContain = text that must appear in the page HTML (catches blank/broken pages).",
+    "pages": [
+      { "name": "Home", "url": "https://iwave-global.com/", "mustContain": "iWave" }
+    ],
+    "slowThresholdSec": 3,
+    "timeoutSec": 60,
+    "retryDelaySec": 20,
+    "pagespeed": {
+      "_comment": "Google PageSpeed Insights for the homepage every hour. Add a free API key as the GitHub secret PSI_API_KEY.",
+      "urls": ["https://iwave-global.com/"],
+      "strategies": ["mobile", "desktop"]
+    },
+    "retentionDays": 90
+  },
+
+  "products": {
+    "_comment": "Every product page is found automatically from the sitemap and speed-checked every hour. include = extra URLs to add, exclude = text; any URL containing it is skipped.",
+    "enabled": true,
+    "sitemapIndex": "https://iwave-global.com/sitemap_index.xml",
+    "sitemapMatch": "product",
+    "include": [],
+    "exclude": ["/product-category/", "/product-tag/"],
+    "maxPages": 400,
+    "concurrency": 4,
+    "pagespeedPerRun": 8,
+    "pagespeedStrategy": "mobile",
+    "historyHours": 168
+  },
+
+  "forms": {
+    "_comment": "Checked every 4 hours. mode 'submit' = fills in testData and really submits, then waits for the thank-you message / download. mode 'check' = no submission. url 'auto:product' = uses the first product page from the sitemap (or set a fixed product URL). open = how to reveal the form: 'floating' clicks the floating contact button, 'download' clicks the document download button, or put a CSS selector such as '#contact-btn'. pick: 'first' | 'download'.",
+    "items": [
+      { "name": "Homepage floating contact form", "url": "https://iwave-global.com/", "open": "floating", "pick": "first", "formSelector": "", "mode": "submit" },
+      { "name": "Product page contact form",      "url": "auto:product",              "open": "",         "pick": "first", "formSelector": "", "mode": "submit" },
+      { "name": "Product document download form", "url": "auto:product",              "open": "download", "pick": "download", "formSelector": "", "mode": "submit" }
+    ],
+    "openText": {
+      "floating": "contact|enquir|inquir|get in touch|talk to|message us|reach us|quote",
+      "download": "download|datasheet|data sheet|brochure|document|product brief"
+    },
+    "testData": {
+      "default": "test",
+      "email": "test@gmail.com",
+      "phone": "1234568",
+      "message": "test"
+    },
+    "successText": ["thank you", "thanks for", "successfully", "has been sent", "submitted", "we will get back", "download will"],
+    "keepRuns": 540
+  }
+}

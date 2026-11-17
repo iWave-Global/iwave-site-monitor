@@ -1,0 +1,38 @@
+name: 4-hourly contact form check
+
+on:
+  schedule:
+    - cron: '23 */4 * * *'     # every 4 hours at :23 (UTC)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monitor-data
+  cancel-in-progress: false
+
+jobs:
+  forms:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install browser
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Run form checks
+        id: check
+        run: node scripts/form-check.mjs
+      - name: Save results
+        if: always()
+        run: bash scripts/commit-data.sh "form check"
+      - name: Alert if a form is broken (GitHub emails you on failure)
+        if: steps.check.outputs.alert == 'true'
+        run: |
+          echo "::error::FORM BROKEN - ${{ steps.check.outputs.alert_text }}"
+          exit 1
