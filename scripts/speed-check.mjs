@@ -111,26 +111,55 @@ async function pool(items, n, fn) {
   return out;
 }
 
+// Google Lighthouse run on the GitHub server itself - the same engine PageSpeed
+// Insights uses, but needs no API key. Used when no PSI_API_KEY is set or PSI fails.
+function lighthouseLocal(url, strategy) {
+  const args = ['lighthouse', url, '--output=json', '--output-path=stdout', '--quiet', '--only-categories=performance',
+    '--max-wait-for-load=60000', '--chrome-flags=--headless=new --no-sandbox --disable-gpu'];
+  if (strategy === 'desktop') args.push('--preset=desktop');
+  return new Promise((resolve) => {
+    execFile('npx', args, { maxBuffer: 64 << 20, timeout: 180000 }, (err, stdout) => {
+      try {
+        const lhr = JSON.parse(stdout);
+        if (lhr.runtimeError?.code) return resolve({ url, strategy, source: 'lighthouse', error: `${lhr.runtimeError.code}: ${lhr.runtimeError.message || ''}`.slice(0, 200) });
+        resolve(fromLhr(url, strategy, lhr, null, 'lighthouse'));
+      } catch {
+        resolve({ url, strategy, source: 'lighthouse', error: String(err?.message || 'Lighthouse failed').split('\n')[0].slice(0, 200) });
+      }
+    });
+  });
+}
+
+function fromLhr(url, strategy, lhr, field, source) {
+  const a = lhr.audits;
+  const num = (id) => a[id]?.numericValue ?? null;
+  return {
+    url, strategy, source,
+    score: Math.round((lhr.categories.performance.score ?? 0) * 100),
+    fcp: round(num('first-contentful-paint') / 1000, 2),
+    lcp: round(num('largest-contentful-paint') / 1000, 2),
+    tbt: Math.round(num('total-blocking-time') ?? 0),
+    cls: round(num('cumulative-layout-shift'), 3),
+    si: round(num('speed-index') / 1000, 2),
+    serverMs: Math.round(num('server-response-time') ?? 0),
+    field,
+  };
+}
+
 async function pagespeed(url, strategy) {
+  if (!process.env.PSI_API_KEY) return lighthouseLocal(url, strategy);
+  const r = await pagespeedApi(url, strategy);
+  return r.error ? lighthouseLocal(url, strategy) : r;
+}
+
+async function pagespeedApi(url, strategy) {
   const key = process.env.PSI_API_KEY ? `&key=${encodeURIComponent(process.env.PSI_API_KEY)}` : '';
   const api = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=${strategy}&category=performance${key}`;
   try {
     const res = await fetch(api, { signal: AbortSignal.timeout(150000) });
     const j = await res.json();
     if (!res.ok) return { url, strategy, error: j?.error?.message?.slice(0, 200) || `HTTP ${res.status}` };
-    const a = j.lighthouseResult.audits;
-    const num = (id) => a[id]?.numericValue ?? null;
-    return {
-      url, strategy,
-      score: Math.round((j.lighthouseResult.categories.performance.score ?? 0) * 100),
-      fcp: round(num('first-contentful-paint') / 1000, 2),
-      lcp: round(num('largest-contentful-paint') / 1000, 2),
-      tbt: Math.round(num('total-blocking-time') ?? 0),
-      cls: round(num('cumulative-layout-shift'), 3),
-      si: round(num('speed-index') / 1000, 2),
-      serverMs: Math.round(num('server-response-time') ?? 0),
-      field: j.loadingExperience?.overall_category || null,
-    };
+    return fromLhr(url, strategy, j.lighthouseResult, j.loadingExperience?.overall_category || null, 'pagespeed-api');
   } catch (e) {
     return { url, strategy, error: String(e.message || e).slice(0, 200) };
   }
@@ -196,7 +225,7 @@ async function runProducts(now, siteDown) {
   // rotating PageSpeed for product pages (oldest first)
   if (P.pagespeedPerRun > 0) {
     const order = urls.slice().sort((a, b) => Date.parse(H.psi[a]?.t || 0) - Date.parse(H.psi[b]?.t || 0)).slice(0, P.pagespeedPerRun);
-    const ps = await pool(order, 4, (u) => pagespeed(u, P.pagespeedStrategy || 'mobile'));
+    const ps = await pool(order, process.env.PSI_API_KEY ? 4 : 1, (u) => pagespeed(u, P.pagespeedStrategy || 'mobile'));
     ps.forEach((p) => { H.psi[p.url] = { t: now, score: p.score ?? null, lcp: p.lcp ?? null, tbt: p.tbt ?? null, error: p.error || null }; });
     for (const u of Object.keys(H.psi)) if (!seen.has(u)) delete H.psi[u];
   }
