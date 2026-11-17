@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '23 */4 * * *'     # every 4 hours at :23 (UTC)
   workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['config.json', 'scripts/form-check.mjs', '.github/workflows/form-check.yml']
 
 permissions:
   contents: write
