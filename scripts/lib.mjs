@@ -54,6 +54,7 @@ export async function discoverProducts(P) {
     }
     urls = [...new Set([...urls, ...(P.include || [])])]
       .filter((u) => !(P.exclude || []).some((x) => u.includes(x)))
+      .filter((u) => !P.urlMatch || u.includes(P.urlMatch) || (P.include || []).includes(u))
       .slice(0, P.maxPages || 400);
     if (!urls.length) throw new Error(`No URLs found in sitemaps matching "${P.sitemapMatch}"`);
     writeJson('products-list.json', { t: new Date().toISOString(), source: maps, urls });

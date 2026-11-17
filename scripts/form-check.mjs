@@ -162,7 +162,12 @@ async function checkForm(browser, item) {
   page.on('pageerror', (e) => jsErrors.push(String(e.message).slice(0, 160)));
   page.on('response', (r) => {
     const u = r.url();
-    if (r.request().method() === 'POST' && HANDLER_RE.test(u)) handlerCalls.push({ url: u.split('?')[0], status: r.status() });
+    if (r.request().method() === 'POST' && HANDLER_RE.test(u)) {
+      const call = { url: u.split('?')[0], status: r.status() };
+      handlerCalls.push(call);
+      // Contact Form 7 / Elementor reply with JSON that says exactly what happened
+      r.json().then((j) => { call.result = j?.status || (j?.success === false ? 'error' : j?.success ? 'success' : null); call.message = j?.message || j?.data?.message || null; call.invalid = (j?.invalid_fields || []).map((f) => `${f.field || f.into}: ${f.message}`); }).catch(() => {});
+    }
     if (r.status() >= 500 && r.request().resourceType() !== 'image') badRequests.push(`${r.status()} ${u.slice(0, 120)}`);
   });
 
@@ -240,7 +245,14 @@ async function checkForm(browser, item) {
         let msg = 'Submitted the test entry but no thank-you message appeared';
         if (err) msg += ` - form said: "${err.slice(0, 160)}"`;
         else if (invalid.length) msg += ` - browser blocked it, fields not accepted: ${invalid.join(', ')} (test data may not match the field format)`;
-        if (h) msg += ` (server HTTP ${h.status})`;
+        const CF7 = {
+          mail_failed: 'WEBSITE COULD NOT SEND THE EMAIL (Contact Form 7 status "mail_failed") - real enquiries may not be reaching your inbox. Check WordPress mail/SMTP settings (e.g. WP Mail SMTP plugin) and the form\'s Mail tab.',
+          spam: 'Entry was marked as SPAM (Contact Form 7 status "spam") - reCAPTCHA v3 or an anti-spam plugin rejects automated test entries. Real visitors are probably fine; switch this form to mode "check" or allow the test entry.',
+          validation_failed: 'Form rejected the test data (validation failed)',
+          aborted: 'Submission was aborted by a plugin',
+        };
+        if (h?.result && CF7[h.result]) msg = `${CF7[h.result]}${h.invalid?.length ? ' - ' + h.invalid.join('; ') : ''}`;
+        if (h) msg += ` (server HTTP ${h.status}${h.result ? ', status ' + h.result : ''})`;
         else if (!invalid.length) msg += ' (no request reached the server)';
         if (d.recaptcha && /captcha|spam|robot/i.test(err + ' ')) msg += ' - reCAPTCHA is blocking automated submissions';
         fail(msg);
