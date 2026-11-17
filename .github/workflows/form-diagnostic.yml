@@ -1,0 +1,34 @@
+name: Form diagnostic (are real visitors blocked?)
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['scripts/form-diagnostic.mjs', '.github/workflows/form-diagnostic.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monitor-data
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install browsers
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          sudo apt-get install -y xvfb >/dev/null
+      - name: Run diagnostic
+        run: xvfb-run -a -s "-screen 0 1366x900x24" node scripts/form-diagnostic.mjs
+      - name: Save results
+        if: always()
+        run: bash scripts/commit-data.sh "form diagnostic"
