@@ -148,8 +148,12 @@ function fromLhr(url, strategy, lhr, field, source) {
 
 async function pagespeed(url, strategy) {
   if (!process.env.PSI_API_KEY) return lighthouseLocal(url, strategy);
-  const r = await pagespeedApi(url, strategy);
-  return r.error ? lighthouseLocal(url, strategy) : r;
+  let r = await pagespeedApi(url, strategy);
+  if (r.error) { await sleep(15000); r = await pagespeedApi(url, strategy); } // Google's API fails now and then - retry once
+  if (!r.error) return r;
+  const local = await lighthouseLocal(url, strategy);
+  local.apiError = r.error; // shown on the dashboard so you know why the official number is missing
+  return local;
 }
 
 async function pagespeedApi(url, strategy) {
