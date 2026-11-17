@@ -261,7 +261,7 @@ function renderTiles(runs, last, lastForm) {
   const uLevel = uptime == null ? null : uptime >= 99.5 ? 'good' : uptime >= 97 ? 'warning' : 'critical';
   const tiles = [
     { label: 'Site status now', value: !last ? '-' : down.length ? 'DOWN' : 'UP',
-      note: !last ? 'waiting for first check' : down.length ? badge('critical', down.map((c) => c.name).join(', ')) : badge('good', `all ${last.checks.length} pages responding`) },
+      note: !last ? 'waiting for first check' : down.length ? badge('critical', down.map((c) => c.name).join(', ')) : badge('good', last.checks.length === 1 ? 'homepage responding' : `all ${last.checks.length} pages responding`) },
     { label: `Uptime (${rangeLabel()})`, value: uptime == null ? '-' : uptime.toFixed(2) + '%', note: uLevel ? badge(uLevel, `${ok}/${checks.length} checks OK`) : '' },
     { label: `Downtime (${rangeLabel()})`, value: fmtDur(downMin) || '0 min', note: open.length ? badge('critical', `${open.length} outage ongoing`) : badge('good', 'no ongoing outage') },
     { label: `Avg home response (${rangeLabel()})`, value: avg == null ? '-' : avg.toFixed(2) + ' s',
