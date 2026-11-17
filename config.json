@@ -51,6 +51,7 @@
       "message": "test"
     },
     "successText": ["thank you", "thanks for", "successfully", "has been sent", "submitted", "we will get back", "download will"],
+    "humanLike": true,
     "keepRuns": 540
   }
 }

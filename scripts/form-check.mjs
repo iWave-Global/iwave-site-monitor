@@ -12,6 +12,22 @@ const SUCCESS_SEL = '.elementor-message-success, .wpcf7-mail-sent-ok, form.sent 
 const ERROR_SEL = '.elementor-message-danger, .elementor-error .elementor-message, .wpcf7-not-valid-tip, form.invalid .wpcf7-response-output, form.failed .wpcf7-response-output, form.spam .wpcf7-response-output, .wpforms-error, .gfield_validation_message, .hs-error-msgs, .ff-el-is-error .error';
 const HANDLER_RE = /admin-ajax\.php|wp-json\/contact-form-7|wp-json\/wpforms|gravityforms|forms\.hsforms|hubspot|fluentform|wp-json\/elementor/i;
 
+// Human-like mode (config forms.humanLike): real Chrome window on a virtual screen, automation flag
+// hidden, mouse movement and slow typing - reCAPTCHA v3 scores this like a normal visitor.
+const HUMAN = F.humanLike === true && process.env.FORCE_HEADLESS !== '1';
+const pause = (page, a, b) => page.waitForTimeout(HUMAN ? a + Math.random() * (b - a) : 0);
+async function typeInto(el, v) {
+  if (!HUMAN) return el.fill(v);
+  await el.click().catch(() => {});
+  await el.fill('');
+  await el.pressSequentially(v, { delay: 50 + Math.random() * 70 });
+  await el.page().waitForTimeout(200 + Math.random() * 500);
+}
+async function browseLikeAVisitor(page) {
+  if (!HUMAN) return;
+  for (let i = 0; i < 6; i++) { await page.mouse.move(200 + Math.random() * 900, 150 + Math.random() * 500, { steps: 12 }); await pause(page, 300, 800); }
+  await page.mouse.wheel(0, 500); await pause(page, 1000, 1800); await page.mouse.wheel(0, -500); await pause(page, 1200, 2200);
+}
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 async function resolveUrl(url) {
@@ -142,7 +158,7 @@ async function fill(form, td) {
       else if (info.type === 'number') v = '1';
       else if (info.type === 'url') v = 'https://example.com';
       else if (info.type === 'date') v = new Date().toISOString().slice(0, 10);
-      await el.fill(v);
+      await typeInto(el, v);
     } catch { /* ignore individual field problems */ }
   }
 }
@@ -156,7 +172,8 @@ async function checkForm(browser, item) {
   if (!url || /REPLACE/i.test(url)) { warn('No page URL - set it in config.json (or check the product sitemap is readable)'); return res; }
   res.url = url;
 
-  const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 }, acceptDownloads: true, userAgent: UA });
+  const ctx = await browser.newContext({ viewport: { width: 1366, height: 820 }, acceptDownloads: true, locale: 'en-IN', timezoneId: 'Asia/Kolkata', ...(HUMAN ? {} : { userAgent: UA }) });
+  if (HUMAN) await ctx.addInitScript(() => { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); });
   // Optional secret header so the website can let monitor test entries past reCAPTCHA
   // (see README: "Let test entries through reCAPTCHA"). Sent only to the website itself.
   if (process.env.MONITOR_KEY) {
@@ -189,6 +206,7 @@ async function checkForm(browser, item) {
     res.loadSec = round((Date.now() - t0) / 1000, 2);
     if (!resp || resp.status() >= 400) { fail(`Page returned HTTP ${resp?.status() ?? 'no response'}`); return res; }
     await page.waitForTimeout(1500); // let floating buttons / sliders initialise
+    await browseLikeAVisitor(page);
 
     await markVisibleForms(page);
     if (item.open) {
@@ -201,6 +219,7 @@ async function checkForm(browser, item) {
       res.opener = opener.text;
       await opener.loc.scrollIntoViewIfNeeded().catch(() => {});
       const directDl = page.waitForEvent('download', { timeout: 6000 }).catch(() => null);
+      await opener.loc.hover().catch(() => {}); await pause(page, 300, 700);
       await opener.loc.click({ timeout: 15000 });
       await page.waitForTimeout(3000);
       if (await Promise.race([directDl, new Promise((r) => setTimeout(() => r(null), 100))])) {
@@ -243,6 +262,8 @@ async function checkForm(browser, item) {
       const errorShown = page.locator(ERROR_SEL).first().waitFor({ state: 'visible', timeout: T }).then(() => null).catch(() => new Promise(() => {}));
       const waiting = Promise.race([anySuccess, errorShown]);
       const handlersBefore = handlerCalls.length;
+      await pause(page, 2000, 3500);
+      await submit.hover().catch(() => {}); await pause(page, 200, 600);
       await submit.click({ timeout: 15000 });
       let how = await waiting;
       await page.waitForTimeout(1000);
@@ -304,11 +325,20 @@ async function checkForm(browser, item) {
 
 async function main() {
   fs.mkdirSync(path.join(DATA, 'screens'), { recursive: true });
-  const browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {});
+  const browser = await chromium.launch(HUMAN
+    ? { headless: false, ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : { channel: 'chrome' }), args: ['--disable-blink-features=AutomationControlled', '--window-size=1366,900'] }
+    : (process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}));
   const t = new Date().toISOString();
   const results = [];
-  for (const item of F.items) {
+  for (const [k, item] of F.items.entries()) {
+    if (HUMAN && k > 0) await new Promise((res) => setTimeout(res, 45000)); // space submissions out like separate visitors
     let r = await checkForm(browser, item);
+    if (r.blockedAsSpam && HUMAN) { // nothing was sent, so one more try is safe
+      await new Promise((res) => setTimeout(res, 60000));
+      const r2 = await checkForm(browser, item);
+      if (!r2.blockedAsSpam) { r2.notes.push('First attempt was flagged by reCAPTCHA, second attempt went through'); r = r2; }
+      else r.notes.push('Flagged by reCAPTCHA twice (2 attempts, 1 minute apart)');
+    }
     // Confirm a failure once - but never re-submit a form that may already have sent an entry.
     const mayHaveSent = r.mode === 'submit' && /server HTTP 2\d\d/.test(r.issues.join(' '));
     if (r.status === 'fail' && !mayHaveSent) {

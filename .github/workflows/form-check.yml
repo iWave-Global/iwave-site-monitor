@@ -18,7 +18,7 @@ concurrency:
 jobs:
   forms:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,11 +28,12 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npx playwright install --with-deps chromium
+          sudo apt-get install -y xvfb >/dev/null
       - name: Run form checks
         id: check
         env:
           MONITOR_KEY: ${{ secrets.MONITOR_KEY }}
-        run: node scripts/form-check.mjs
+        run: xvfb-run -a -s "-screen 0 1366x900x24" node scripts/form-check.mjs
       - name: Save results
         if: always()
         run: bash scripts/commit-data.sh "form check"
