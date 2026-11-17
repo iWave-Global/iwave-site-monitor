@@ -161,8 +161,8 @@
       <div id="pageTable"></div>
     </div>
     <div class="card">
-      <h2>Core Web Vitals (latest PageSpeed run)</h2>
-      <div class="desc">LCP under 2.5 s, TBT under 200 ms and CLS under 0.1 are "good".</div>
+      <h2>PageSpeed details - Speed Index &amp; Core Web Vitals</h2>
+      <div class="desc">Good (mobile): Speed Index under 3.4 s, LCP under 2.5 s, TBT under 200 ms, CLS under 0.1.</div>
       <div id="vitals"></div>
     </div>
   </div>
@@ -267,8 +267,8 @@ function renderTiles(runs, last, lastForm) {
     { label: `Downtime (${rangeLabel()})`, value: fmtDur(downMin) || '0 min', note: open.length ? badge('critical', `${open.length} outage ongoing`) : badge('good', 'no ongoing outage') },
     { label: `Avg home response (${rangeLabel()})`, value: avg == null ? '-' : avg.toFixed(2) + ' s',
       note: avg == null ? '' : badge(avg <= 0.8 ? 'good' : avg <= 3 ? 'warning' : 'critical', avg <= 0.8 ? 'fast' : avg <= 3 ? 'acceptable' : 'slow') },
-    { label: 'PageSpeed mobile', value: mob ? mob.score : '-', note: mob ? badge(scoreLevel(mob.score), `LCP ${mob.lcp}s`) : '' },
-    { label: 'PageSpeed desktop', value: desk ? desk.score : '-', note: desk ? badge(scoreLevel(desk.score), `LCP ${desk.lcp}s`) : '' },
+    { label: 'PageSpeed mobile', value: mob ? mob.score : '-', note: mob ? badge(scoreLevel(mob.score), `Speed Index ${mob.si}s · LCP ${mob.lcp}s`) : '' },
+    { label: 'PageSpeed desktop', value: desk ? desk.score : '-', note: desk ? badge(scoreLevel(desk.score), `Speed Index ${desk.si}s · LCP ${desk.lcp}s`) : '' },
     ...(lp ? [{ label: 'Product pages (last check)', value: `${lp.ok}/${lp.n}`, note: lp.fail ? badge('critical', `${lp.fail} failing`) : lp.slow ? badge('warning', `all up · ${lp.slow} slow`) : badge('good', 'all up, none slow') },
       { label: 'Product typical response', value: lp.median != null ? lp.median.toFixed(2) + ' s' : '-', note: lp.p95 != null ? badge(lp.p95 <= 1 ? 'good' : lp.p95 <= 3 ? 'warning' : 'critical', `slowest 5%: ${lp.p95.toFixed(2)} s`) : '' }] : []),
     { label: 'Forms working (last check)', value: fr.length ? `${fr.length - fFail}/${fr.length}` : '-',
@@ -402,11 +402,17 @@ function renderPages(runs) {
 
 function renderVitals() {
   const run = [...DATA.speed].reverse().find((r) => (r.psi || []).some((p) => p.score != null));
-  if (!run) { $('vitals').innerHTML = '<div class="empty">No PageSpeed results yet. Add a free PSI_API_KEY secret if results show errors.</div>'; return; }
+  if (!run) { $('vitals').innerHTML = '<div class="empty">No PageSpeed results yet.</div>'; return; }
   const lv = (v, g, p) => v == null ? null : v <= g ? 'good' : v <= p ? 'warning' : 'critical';
-  $('vitals').innerHTML = `<div class="muted" style="font-size:12px;margin-bottom:6px">Run ${fmtT(run.t)} IST</div><table><thead><tr><th>Device</th><th class="num">Score</th><th class="num">LCP</th><th class="num">FCP</th><th class="num">TBT</th><th class="num">CLS</th><th class="num">Server</th></tr></thead><tbody>${run.psi.map((p) => p.error
-    ? `<tr><td>${esc(p.strategy)}</td><td colspan="6" class="muted">Error: ${esc(p.error)}</td></tr>`
-    : `<tr><td>${esc(p.strategy)}</td><td class="num">${badge(scoreLevel(p.score), p.score)}</td><td class="num">${badge(lv(p.lcp, 2.5, 4), p.lcp + ' s')}</td><td class="num">${p.fcp} s</td><td class="num">${badge(lv(p.tbt, 200, 600), p.tbt + ' ms')}</td><td class="num">${badge(lv(p.cls, 0.1, 0.25), p.cls)}</td><td class="num">${p.serverMs} ms</td></tr>`).join('')}</tbody></table>`;
+  const src = run.psi.some((p) => p.source === 'pagespeed-api') ? 'Google PageSpeed Insights (same as pagespeed.web.dev)' : 'Lighthouse run on the GitHub server (add PSI_API_KEY for official Google PageSpeed numbers)';
+  const lab = run.psi.map((p) => p.error
+    ? `<tr><td>${esc(p.strategy)}</td><td colspan="7" class="muted">Error: ${esc(p.error)}</td></tr>`
+    : `<tr><td>${esc(p.strategy)}</td><td class="num">${badge(scoreLevel(p.score), p.score)}</td><td class="num">${badge(lv(p.si, p.strategy === 'desktop' ? 1.3 : 3.4, p.strategy === 'desktop' ? 2.3 : 5.8), p.si + ' s')}</td><td class="num">${badge(lv(p.fcp, p.strategy === 'desktop' ? 0.9 : 1.8, p.strategy === 'desktop' ? 1.6 : 3), p.fcp + ' s')}</td><td class="num">${badge(lv(p.lcp, p.strategy === 'desktop' ? 1.2 : 2.5, p.strategy === 'desktop' ? 2.4 : 4), p.lcp + ' s')}</td><td class="num">${badge(lv(p.tbt, 200, 600), p.tbt + ' ms')}</td><td class="num">${badge(lv(p.cls, 0.1, 0.25), p.cls)}</td><td class="num">${p.serverMs} ms</td></tr>`).join('');
+  const real = run.psi.filter((p) => p.field && typeof p.field === 'object');
+  const realRows = real.length ? `<div style="margin-top:12px"><b style="font-size:13px">Real visitors (Chrome users, last 28 days)</b></div><table><thead><tr><th>Device</th><th>Overall</th><th class="num">LCP</th><th class="num">INP</th><th class="num">CLS</th><th class="num">FCP</th><th class="num">TTFB</th></tr></thead><tbody>${real.map((p) => { const f = p.field;
+      const cat = { FAST: ['good', 'Good'], AVERAGE: ['warning', 'Needs work'], SLOW: ['critical', 'Poor'] }[f.category] || ['warning', f.category];
+      return `<tr><td>${esc(p.strategy)}</td><td>${badge(cat[0], cat[1])}</td><td class="num">${f.lcp ?? '-'} s</td><td class="num">${f.inp ?? '-'} ms</td><td class="num">${f.cls ?? '-'}</td><td class="num">${f.fcp ?? '-'} s</td><td class="num">${f.ttfb ?? '-'} s</td></tr>`; }).join('')}</tbody></table>` : '';
+  $('vitals').innerHTML = `<div class="muted" style="font-size:12px;margin-bottom:6px">Homepage · run ${fmtT(run.t)} IST · source: ${src}</div><table><thead><tr><th>Device</th><th class="num">Score</th><th class="num">Speed Index</th><th class="num">FCP</th><th class="num">LCP</th><th class="num">TBT</th><th class="num">CLS</th><th class="num">Server</th></tr></thead><tbody>${lab}</tbody></table>${realRows}`;
 }
 
 function renderSpeedLog(runs) {

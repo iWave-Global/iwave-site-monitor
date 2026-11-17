@@ -159,7 +159,17 @@ async function pagespeedApi(url, strategy) {
     const res = await fetch(api, { signal: AbortSignal.timeout(150000) });
     const j = await res.json();
     if (!res.ok) return { url, strategy, error: j?.error?.message?.slice(0, 200) || `HTTP ${res.status}` };
-    return fromLhr(url, strategy, j.lighthouseResult, j.loadingExperience?.overall_category || null, 'pagespeed-api');
+    // Real-user data from Chrome (CrUX, last 28 days) - only Google's API has this
+    const m = j.loadingExperience?.metrics || {};
+    const real = j.loadingExperience?.overall_category ? {
+      category: j.loadingExperience.overall_category,
+      lcp: m.LARGEST_CONTENTFUL_PAINT_MS ? round(m.LARGEST_CONTENTFUL_PAINT_MS.percentile / 1000, 2) : null,
+      inp: m.INTERACTION_TO_NEXT_PAINT?.percentile ?? null,
+      cls: m.CUMULATIVE_LAYOUT_SHIFT_SCORE ? round(m.CUMULATIVE_LAYOUT_SHIFT_SCORE.percentile / 100, 3) : null,
+      fcp: m.FIRST_CONTENTFUL_PAINT_MS ? round(m.FIRST_CONTENTFUL_PAINT_MS.percentile / 1000, 2) : null,
+      ttfb: m.EXPERIMENTAL_TIME_TO_FIRST_BYTE ? round(m.EXPERIMENTAL_TIME_TO_FIRST_BYTE.percentile / 1000, 2) : null,
+    } : null;
+    return fromLhr(url, strategy, j.lighthouseResult, real, 'pagespeed-api');
   } catch (e) {
     return { url, strategy, error: String(e.message || e).slice(0, 200) };
   }
