@@ -66,8 +66,14 @@ async function run(v) {
     if (!(await btn.count())) { out.notes.push('floating Contact Us button not found'); return out; }
     await btn.hover().catch(() => {}); await pause(page, 300, 700);
     await btn.click(); await pause(page, 1500, 2500);
-    const form = page.locator('form.wpcf7-form:visible').first();
-    if (!(await form.count())) { out.notes.push('popup form did not appear'); return out; }
+    // pick the form that is actually on top (the popup), not one hidden behind its overlay
+    const idx = await page.evaluate(() => [...document.querySelectorAll('form')].findIndex((f) => {
+      const r = f.getBoundingClientRect(); if (!r.width || !r.height) return false;
+      const el = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(40, r.height / 2));
+      return el && f.contains(el) && !!f.querySelector('input[type=email], input[name*=mail i]');
+    }));
+    if (idx < 0) { out.notes.push('popup form did not appear'); return out; }
+    const form = page.locator('form').nth(idx);
     const fields = form.locator('input:visible, textarea:visible');
     const n = await fields.count();
     for (let i = 0; i < n; i++) {
