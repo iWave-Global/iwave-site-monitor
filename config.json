@@ -11,7 +11,7 @@
     "timeoutSec": 60,
     "retryDelaySec": 20,
     "pagespeed": {
-      "_comment": "Google PageSpeed Insights for the homepage every hour. Add a free API key as the GitHub secret PSI_API_KEY.",
+      "_comment": "Homepage PageSpeed every hour. With the GitHub secret PSI_API_KEY it uses Google PageSpeed Insights (official numbers + real-user data); without it, Lighthouse runs on the GitHub server.",
       "urls": ["https://iwave-global.com/"],
       "strategies": ["mobile", "desktop"]
     },
