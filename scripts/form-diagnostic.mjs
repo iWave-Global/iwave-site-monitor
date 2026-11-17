@@ -28,7 +28,12 @@ async function run(v) {
     ...(v.human ? {} : { userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36 iWaveSiteMonitor/1.0' }) });
   if (v.human) await ctx.addInitScript(() => { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); });
   const page = await ctx.newPage();
-  page.on('console', (m) => { if (m.type() === 'error') out.consoleErrors.push(m.text().slice(0, 160)); });
+  page.on('console', (m) => {
+    if (m.type() !== 'error') return;
+    const t = m.text();
+    if (/Access to image at|Failed to load resource/.test(t)) { out.imageErrors = (out.imageErrors || 0) + 1; return; }
+    out.consoleErrors.push(t.slice(0, 160));
+  });
   page.on('request', (r) => {
     if (r.method() === 'POST' && /contact-form-7\/v1\/contact-forms\/\d+\/feedback/.test(r.url())) {
       const body = r.postData() || '';
@@ -57,7 +62,7 @@ async function run(v) {
     }
     if (!out.recaptchaBadge) out.recaptchaBadge = 'badge not found';
 
-    const btn = page.locator('.contactModal, [class*=floating-btn]').first();
+    const btn = page.locator('.floating-btn.contactModal:visible, .floating-btn:visible').first();
     if (!(await btn.count())) { out.notes.push('floating Contact Us button not found'); return out; }
     await btn.hover().catch(() => {}); await pause(page, 300, 700);
     await btn.click(); await pause(page, 1500, 2500);
