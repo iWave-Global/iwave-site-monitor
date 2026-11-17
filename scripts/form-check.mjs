@@ -157,6 +157,16 @@ async function checkForm(browser, item) {
   res.url = url;
 
   const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 }, acceptDownloads: true, userAgent: UA });
+  // Optional secret header so the website can let monitor test entries past reCAPTCHA
+  // (see README: "Let test entries through reCAPTCHA"). Sent only to the website itself.
+  if (process.env.MONITOR_KEY) {
+    const host = new URL(url).hostname;
+    await ctx.route('**/*', (route) => {
+      const req = route.request();
+      if (new URL(req.url()).hostname !== host) return route.continue();
+      return route.continue({ headers: { ...req.headers(), 'x-monitor-key': process.env.MONITOR_KEY } });
+    });
+  }
   const page = await ctx.newPage();
   const jsErrors = [], badRequests = [], handlerCalls = [];
   page.on('pageerror', (e) => jsErrors.push(String(e.message).slice(0, 160)));
@@ -247,7 +257,7 @@ async function checkForm(browser, item) {
         else if (invalid.length) msg += ` - browser blocked it, fields not accepted: ${invalid.join(', ')} (test data may not match the field format)`;
         const CF7 = {
           mail_failed: 'WEBSITE COULD NOT SEND THE EMAIL (Contact Form 7 status "mail_failed") - real enquiries may not be reaching your inbox. Check WordPress mail/SMTP settings (e.g. WP Mail SMTP plugin) and the form\'s Mail tab.',
-          spam: 'Entry was marked as SPAM (Contact Form 7 status "spam") - reCAPTCHA v3 or an anti-spam plugin rejects automated test entries. Real visitors are probably fine; switch this form to mode "check" or allow the test entry.',
+          spam: 'Form works up to the server, but reCAPTCHA marked the automated test entry as SPAM (Contact Form 7 status "spam"), so no email was sent. Real visitors are not affected. To test end-to-end, add the MONITOR_KEY snippet (README).',
           validation_failed: 'Form rejected the test data (validation failed)',
           aborted: 'Submission was aborted by a plugin',
         };
@@ -255,7 +265,8 @@ async function checkForm(browser, item) {
         if (h) msg += ` (server HTTP ${h.status}${h.result ? ', status ' + h.result : ''})`;
         else if (!invalid.length) msg += ' (no request reached the server)';
         if (d.recaptcha && /captcha|spam|robot/i.test(err + ' ')) msg += ' - reCAPTCHA is blocking automated submissions';
-        fail(msg);
+        if (h?.result === 'spam') { warn(msg); res.blockedAsSpam = true; } // the form works; only the automated test is blocked
+        else fail(msg);
       }
     } else {
       // 'check' mode: press Submit with EMPTY required fields - the form must reject it.

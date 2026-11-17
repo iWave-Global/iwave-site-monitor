@@ -71,6 +71,26 @@ When the site goes down or a form breaks, that workflow run is marked **failed**
 - A failed submission that reached the server is **not** retried, so you never get duplicate test entries.
 - If reCAPTCHA starts rejecting the automated entries, switch that form to `"mode": "check"`. That mode presses Submit with empty fields, so nothing is sent, but it still proves the form and its server handler respond.
 
+## Let test entries through reCAPTCHA (needed for full end-to-end form tests)
+Your forms use Contact Form 7 with reCAPTCHA v3, which marks entries from an automated browser as spam. The test then shows **Warning: blocked as spam**: the form, fields and server all work, but no email is sent. To test all the way to the inbox:
+
+1. Pick a long random secret (or use the one Claude gave you).
+2. GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**, name `MONITOR_KEY`, value = the secret.
+3. On the website, add this snippet using the **Code Snippets** plugin (Snippets → Add New → PHP, "Run everywhere"), or in the child theme's `functions.php`, with the same secret:
+
+```php
+// iWave website monitor: let automated form tests past reCAPTCHA, only when they carry the secret key.
+add_filter( 'wpcf7_spam', function ( $spam ) {
+    $key = 'PASTE-THE-SAME-SECRET-HERE';
+    if ( $spam && ! empty( $_SERVER['HTTP_X_MONITOR_KEY'] ) && hash_equals( $key, $_SERVER['HTTP_X_MONITOR_KEY'] ) ) {
+        return false;
+    }
+    return $spam;
+}, 99 );
+```
+
+The monitor sends the secret only to iwave-global.com, in a hidden header, never to Google or other sites. Without the exact secret, reCAPTCHA keeps working as normal for everyone else.
+
 ## Things to know
 - **Check timing:** GitHub starts scheduled runs at :07 every hour, sometimes 5–15 minutes late at busy times. Downtime is measured to the nearest hourly check, so a 10-minute blip between checks may be missed. For minute-level downtime alerts, add a free UptimeRobot monitor alongside this.
 - **Failures are confirmed:** a failed page or form is re-tested once (after 20 s for pages, immediately for forms) before it counts as down. Failures that pass on retry are logged as *Brief failure*.

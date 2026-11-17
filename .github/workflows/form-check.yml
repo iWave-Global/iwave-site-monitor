@@ -30,6 +30,8 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Run form checks
         id: check
+        env:
+          MONITOR_KEY: ${{ secrets.MONITOR_KEY }}
         run: node scripts/form-check.mjs
       - name: Save results
         if: always()
