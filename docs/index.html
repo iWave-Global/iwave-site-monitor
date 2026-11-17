@@ -258,6 +258,7 @@ function renderTiles(runs, last, lastForm) {
   const fr = lastForm ? lastForm.results : [];
   const lp = DATA.prodHist.at(-1);
   const fPass = fr.filter((r) => r.status === 'pass').length, fFail = fr.filter((r) => r.status === 'fail').length;
+  const fSpam = fr.filter((r) => r.blockedAsSpam).length;
   const uLevel = uptime == null ? null : uptime >= 99.5 ? 'good' : uptime >= 97 ? 'warning' : 'critical';
   const tiles = [
     { label: 'Site status now', value: !last ? '-' : down.length ? 'DOWN' : 'UP',
@@ -270,8 +271,10 @@ function renderTiles(runs, last, lastForm) {
     { label: 'PageSpeed desktop', value: desk ? desk.score : '-', note: desk ? badge(scoreLevel(desk.score), `LCP ${desk.lcp}s`) : '' },
     ...(lp ? [{ label: 'Product pages (last check)', value: `${lp.ok}/${lp.n}`, note: lp.fail ? badge('critical', `${lp.fail} failing`) : lp.slow ? badge('warning', `all up · ${lp.slow} slow`) : badge('good', 'all up, none slow') },
       { label: 'Product typical response', value: lp.median != null ? lp.median.toFixed(2) + ' s' : '-', note: lp.p95 != null ? badge(lp.p95 <= 1 ? 'good' : lp.p95 <= 3 ? 'warning' : 'critical', `slowest 5%: ${lp.p95.toFixed(2)} s`) : '' }] : []),
-    { label: 'Forms (last check)', value: fr.length ? `${fPass}/${fr.length}` : '-',
-      note: !fr.length ? 'waiting for first check' : fFail ? badge('critical', `${fFail} broken`) : fPass === fr.length ? badge('good', 'all working') : badge('warning', 'check warnings') },
+    { label: 'Forms working (last check)', value: fr.length ? `${fr.length - fFail}/${fr.length}` : '-',
+      note: !fr.length ? 'waiting for first check' : fFail ? badge('critical', `${fFail} broken`)
+        : fSpam ? badge('warning', `${fSpam} test entr${fSpam === 1 ? 'y' : 'ies'} blocked by reCAPTCHA`)
+        : fPass === fr.length ? badge('good', 'all confirmed end-to-end') : badge('warning', 'see warnings') },
   ];
   $('tiles').innerHTML = tiles.map((t) => `<div class="card tile"><div class="label">${t.label}</div><div class="value">${t.value}</div><div class="note">${t.note}</div></div>`).join('');
 }
@@ -372,7 +375,7 @@ function renderForms() {
   const runs = DATA.forms;
   if (!runs.length) { $('formCards').innerHTML = '<div class="empty">No form checks yet - run the form check once from GitHub Actions.</div>'; $('formLog').innerHTML = ''; return; }
   const last = runs.at(-1);
-  const lvl = { pass: 'good', warn: 'warning', fail: 'critical' }, lbl = { pass: 'Working', warn: 'Warning', fail: 'Broken' };
+  const lvl = { pass: 'good', warn: 'warning', fail: 'critical' }, lbl = { pass: 'Working', warn: 'Working - with warning', fail: 'Broken' };
   $('formCards').innerHTML = last.results.map((r) => {
     const hist = runs.slice(-30).map((run) => { const x = run.results.find((y) => y.name === r.name); return x ? `<span title="${fmtT(run.t)} - ${lbl[x.status]}" style="background:var(${STATUS[lvl[x.status]]})"></span>` : ''; }).join('');
     const items = [...r.issues, ...r.notes].map((s) => `<li>${esc(s)}</li>`).join('');
