@@ -190,6 +190,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 const fmtT = (t, opt = {}) => new Date(t).toLocaleString('en-IN', { timeZone: TZ, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, ...opt });
 const fmtDur = (m) => m == null ? '' : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${Math.floor(m / 1440)} d ${Math.floor((m % 1440) / 60)} h`;
 const badge = (level, text) => `<span class="badge"><span class="dot" style="background:var(${STATUS[level]})"></span>${level === 'good' ? '✓' : level === 'critical' ? '✕' : '!'} ${esc(text)}</span>`;
+const psiLink = (url, ff = 'mobile', label = 'Open in Google PageSpeed ↗') => `<a href="https://pagespeed.web.dev/analysis?url=${encodeURIComponent(url)}&form_factor=${ff}" target="_blank" rel="noopener">${label}</a>`;
 const scoreLevel = (s) => s == null ? null : s >= 90 ? 'good' : s >= 50 ? 'warning' : 'critical';
 
 let DATA = { speed: [], incidents: [], forms: [], prodHist: [], prodPages: { t: [], pages: {}, psi: {} } };
@@ -267,8 +268,8 @@ function renderTiles(runs, last, lastForm) {
     { label: `Downtime (${rangeLabel()})`, value: fmtDur(downMin) || '0 min', note: open.length ? badge('critical', `${open.length} outage ongoing`) : badge('good', 'no ongoing outage') },
     { label: `Avg home response (${rangeLabel()})`, value: avg == null ? '-' : avg.toFixed(2) + ' s',
       note: avg == null ? '' : badge(avg <= 0.8 ? 'good' : avg <= 3 ? 'warning' : 'critical', avg <= 0.8 ? 'fast' : avg <= 3 ? 'acceptable' : 'slow') },
-    { label: 'PageSpeed mobile', value: mob ? mob.score : '-', note: mob ? badge(scoreLevel(mob.score), `Speed Index ${mob.si}s · LCP ${mob.lcp}s`) : '' },
-    { label: 'PageSpeed desktop', value: desk ? desk.score : '-', note: desk ? badge(scoreLevel(desk.score), `Speed Index ${desk.si}s · LCP ${desk.lcp}s`) : '' },
+    { label: 'PageSpeed mobile', value: mob ? mob.score : '-', note: mob ? badge(scoreLevel(mob.score), `Speed Index ${mob.si}s · LCP ${mob.lcp}s`) + `<div style="margin-top:4px">${psiLink(mob.url, 'mobile', 'Verify on Google ↗')}</div>` : '' },
+    { label: 'PageSpeed desktop', value: desk ? desk.score : '-', note: desk ? badge(scoreLevel(desk.score), `Speed Index ${desk.si}s · LCP ${desk.lcp}s`) + `<div style="margin-top:4px">${psiLink(desk.url, 'desktop', 'Verify on Google ↗')}</div>` : '' },
     ...(lp ? [{ label: 'Product pages (last check)', value: `${lp.ok}/${lp.n}`, note: lp.fail ? badge('critical', `${lp.fail} failing`) : lp.slow ? badge('warning', `all up · ${lp.slow} slow`) : badge('good', 'all up, none slow') },
       { label: 'Product typical response', value: lp.median != null ? lp.median.toFixed(2) + ' s' : '-', note: lp.p95 != null ? badge(lp.p95 <= 1 ? 'good' : lp.p95 <= 3 ? 'warning' : 'critical', `slowest 5%: ${lp.p95.toFixed(2)} s`) : '' }] : []),
     { label: 'Forms working (last check)', value: fr.length ? `${fr.length - fFail}/${fr.length}` : '-',
@@ -408,12 +409,12 @@ function renderVitals() {
   const src = run.psi.map((p) => `${p.strategy}: ${srcName(p)}`).join(' · ');
   const lab = run.psi.map((p) => p.error
     ? `<tr><td>${esc(p.strategy)}</td><td colspan="7" class="muted">Error: ${esc(p.error)}</td></tr>`
-    : `<tr><td>${esc(p.strategy)}</td><td class="num">${badge(scoreLevel(p.score), p.score)}</td><td class="num">${badge(lv(p.si, p.strategy === 'desktop' ? 1.3 : 3.4, p.strategy === 'desktop' ? 2.3 : 5.8), p.si + ' s')}</td><td class="num">${badge(lv(p.fcp, p.strategy === 'desktop' ? 0.9 : 1.8, p.strategy === 'desktop' ? 1.6 : 3), p.fcp + ' s')}</td><td class="num">${badge(lv(p.lcp, p.strategy === 'desktop' ? 1.2 : 2.5, p.strategy === 'desktop' ? 2.4 : 4), p.lcp + ' s')}</td><td class="num">${badge(lv(p.tbt, 200, 600), p.tbt + ' ms')}</td><td class="num">${badge(lv(p.cls, 0.1, 0.25), p.cls)}</td><td class="num">${p.serverMs} ms</td></tr>`).join('');
+    : `<tr><td>${esc(p.strategy)}</td><td class="num">${badge(scoreLevel(p.score), p.score)}</td><td class="num">${badge(lv(p.si, p.strategy === 'desktop' ? 1.3 : 3.4, p.strategy === 'desktop' ? 2.3 : 5.8), p.si + ' s')}</td><td class="num">${badge(lv(p.fcp, p.strategy === 'desktop' ? 0.9 : 1.8, p.strategy === 'desktop' ? 1.6 : 3), p.fcp + ' s')}</td><td class="num">${badge(lv(p.lcp, p.strategy === 'desktop' ? 1.2 : 2.5, p.strategy === 'desktop' ? 2.4 : 4), p.lcp + ' s')}</td><td class="num">${badge(lv(p.tbt, 200, 600), p.tbt + ' ms')}</td><td class="num">${badge(lv(p.cls, 0.1, 0.25), p.cls)}</td><td class="num">${p.serverMs} ms</td><td>${psiLink(p.url, p.strategy, 'Open ↗')}</td></tr>`).join('');
   const real = run.psi.filter((p) => p.field && typeof p.field === 'object');
   const realRows = real.length ? `<div style="margin-top:12px"><b style="font-size:13px">Real visitors (Chrome users, last 28 days)</b></div><table><thead><tr><th>Device</th><th>Overall</th><th class="num">LCP</th><th class="num">INP</th><th class="num">CLS</th><th class="num">FCP</th><th class="num">TTFB</th></tr></thead><tbody>${real.map((p) => { const f = p.field;
       const cat = { FAST: ['good', 'Good'], AVERAGE: ['warning', 'Needs work'], SLOW: ['critical', 'Poor'] }[f.category] || ['warning', f.category];
-      return `<tr><td>${esc(p.strategy)}</td><td>${badge(cat[0], cat[1])}</td><td class="num">${f.lcp ?? '-'} s</td><td class="num">${f.inp ?? '-'} ms</td><td class="num">${f.cls ?? '-'}</td><td class="num">${f.fcp ?? '-'} s</td><td class="num">${f.ttfb ?? '-'} s</td></tr>`; }).join('')}</tbody></table>` : '';
-  $('vitals').innerHTML = `<div class="muted" style="font-size:12px;margin-bottom:6px">Homepage · run ${fmtT(run.t)} IST · source: ${src}</div><table><thead><tr><th>Device</th><th class="num">Score</th><th class="num">Speed Index</th><th class="num">FCP</th><th class="num">LCP</th><th class="num">TBT</th><th class="num">CLS</th><th class="num">Server</th></tr></thead><tbody>${lab}</tbody></table>${realRows}`;
+      return `<tr><td>${esc(p.strategy)}</td><td>${badge(cat[0], cat[1])}</td><td class="num">${f.lcp != null ? f.lcp + ' s' : '-'}</td><td class="num">${f.inp != null ? f.inp + ' ms' : '-'}</td><td class="num">${f.cls != null ? f.cls + '' : '-'}</td><td class="num">${f.fcp != null ? f.fcp + ' s' : '-'}</td><td class="num">${f.ttfb != null ? f.ttfb + ' s' : '-'}</td></tr>`; }).join('')}</tbody></table>` : '';
+  $('vitals').innerHTML = `<div class="muted" style="font-size:12px;margin-bottom:6px">Homepage · run ${fmtT(run.t)} IST · source: ${src}</div><table><thead><tr><th>Device</th><th class="num">Score</th><th class="num">Speed Index</th><th class="num">FCP</th><th class="num">LCP</th><th class="num">TBT</th><th class="num">CLS</th><th class="num">Server</th><th>Google report</th></tr></thead><tbody>${lab}</tbody></table>${realRows}`;
 }
 
 function renderSpeedLog(runs) {
@@ -463,7 +464,7 @@ function renderProducts() {
     <td class="num">${r.now == null ? badge('critical', 'HTTP ' + (r.st || 'error')) : badge(lvl(r.now), r.now.toFixed(2) + ' s')}</td>
     <td class="num">${r.avg != null ? r.avg.toFixed(2) + ' s' : '-'}</td><td class="num">${r.max != null ? r.max.toFixed(2) + ' s' : '-'}</td>
     <td class="num">${r.up != null ? r.up + '%' : '-'}</td><td>${esc(r.cache || '-')}</td>
-    <td class="num">${r.psi?.score != null ? `<span title="checked ${fmtT(r.psi.t)} · LCP ${r.psi.lcp}s">${badge(scoreLevel(r.psi.score), r.psi.score)}</span>` : r.psi?.error ? '<span class="muted" title="' + esc(r.psi.error) + '">error</span>' : '<span class="muted">queued</span>'}</td>
+    <td class="num">${r.psi?.score != null ? `<a style="text-decoration:none" href="https://pagespeed.web.dev/analysis?url=${encodeURIComponent(r.url)}&form_factor=mobile" target="_blank" rel="noopener" title="checked ${fmtT(r.psi.t)} · LCP ${r.psi.lcp}s - open Google PageSpeed report">${badge(scoreLevel(r.psi.score), r.psi.score)} ↗</a>` : r.psi?.error ? '<span class="muted" title="' + esc(r.psi.error) + '">error</span>' : '<span class="muted">queued</span>'}</td>
     <td>${spark(r.spark)}</td><td class="muted">${esc(r.issue ? r.issue : '')}</td></tr>`).join('')}</tbody></table>`;
 }
 
