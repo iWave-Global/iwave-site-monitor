@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iWave Events 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a working operations desk — calm, exact, numbers first.
+   IDEA: the trade-show planning wall: twelve month columns, colored cards by status.
+   PICTURE: the month wall itself — stacked status bars you click to filter.
+   COLOUR and TYPE: white, ink #101418, one warm yellow slab for leads; Manrope.
+   LAYOUT: sticky filter bar, tabs, KPI strip, wall + lists, then tables. */
+:root{color-scheme:light dark;--bg:light-dark(#fff,#101418);--ink:light-dark(#101418,#eef1f4);--mute:light-dark(#5b6573,#9aa4b1);--line:light-dark(#e3e6ea,#262c34);--soft:light-dark(#f4f5f7,#181d24);--y:#ffd84a;--done:light-dark(#1f8a5b,#3fbf85);--plan:light-dark(#2c6bd8,#6a9cf0);--disc:light-dark(#d97a0f,#f0a54a);--no:light-dark(#d6453d,#f07a72);--vis:light-dark(#8a4fd0,#b48cf0);--up:light-dark(#0e8fa3,#4cc3d4)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Manrope,system-ui,sans-serif;overflow-x:clip}
+h1{font-size:clamp(28px,4vw,40px);line-height:1.05;margin:0;text-wrap:balance;font-weight:800}
+h2{font-size:20px;margin:0 0 12px;font-weight:700}
+.wrap{max-width:1240px;margin:0 auto;padding:0 max(4vw,16px)}
+header{padding:28px 0 8px}
+.sub{color:var(--mute);margin:6px 0 0}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chips{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;flex:1 1 520px}
+.chip{flex:none;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:0 12px;min-height:36px;font:600 14px Manrope,sans-serif;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button,select,input,textarea{font:inherit;color:inherit}
+.btn{min-height:40px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg);font-weight:600;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--y);outline-offset:1px}
+input,select,textarea{min-height:40px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:6px 10px;font-size:16px}
+.search{flex:1 1 200px}
+nav.tabs{display:flex;gap:2px;margin-top:10px;overflow-x:auto}
+nav.tabs a{flex:none;padding:10px 14px;text-decoration:none;color:var(--mute);font-weight:700;border-bottom:3px solid transparent}
+nav.tabs a[aria-current=page]{color:var(--ink);border-color:var(--ink)}
+.note{font-size:14px;color:var(--mute)}
+.banner{background:var(--soft);border-radius:8px;padding:10px 14px;margin:12px 0;font-size:14px}
+section.view{padding:20px 0 48px}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.kpi{background:var(--bg);padding:14px 16px}
+.kpi b{display:block;font-size:clamp(22px,2.6vw,32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;font-weight:800;font-variant-numeric:tabular-nums}
+.kpi span{font-size:14px;color:var(--mute)}
+.kpi.hot{background:var(--y);color:#101418}.kpi.hot span{color:#3b3a2a}
+.grid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:28px;margin-top:28px}
+@media(max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.wall{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;align-items:end;height:240px}
+.col{display:flex;flex-direction:column-reverse;height:100%;cursor:pointer;border-radius:6px;padding:2px;background:none;border:0}
+.col.sel{background:var(--soft);outline:2px solid var(--ink)}
+.seg{width:100%;border-radius:3px;margin-top:2px}
+.mlab{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;text-align:center;font-size:13px;color:var(--mute);margin-top:6px}
+.mlab i{font-style:normal;display:block;font-weight:700;color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;margin-top:12px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+.s-Done{background:var(--done)}.s-Planned{background:var(--plan)}.s-Discussion{background:var(--disc)}.s-Not{background:var(--no)}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:13px;font-weight:700;color:#fff;white-space:nowrap}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:grid;grid-template-columns:76px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.list .when{font-weight:800;white-space:nowrap}
+.hbar{display:grid;grid-template-columns:minmax(0,9em) minmax(0,1fr) 4em;gap:10px;align-items:center;font-size:14px;padding:5px 0}
+.hbar .t{height:14px;background:var(--soft);border-radius:3px;overflow:hidden}.hbar .t div{height:100%;background:var(--ink)}
+.hbar .n{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hbar .k{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.tools .grow{flex:1}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;font-size:13px;color:var(--mute);font-weight:700;padding:8px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--soft)}
+.tag{font-size:13px;color:var(--mute)}
+.act{white-space:nowrap}.act button{min-height:32px;padding:0 10px;font-size:13px}
+.empty{padding:40px 16px;text-align:center;color:var(--mute);border:1px dashed var(--line);border-radius:10px}
+dialog{border:0;border-radius:12px;padding:0;width:min(640px,94vw);background:var(--bg);color:var(--ink);box-shadow:0 20px 60px #0005}
+dialog::backdrop{background:#10141899}
+.dh{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.db{padding:16px 20px;max-height:65vh;overflow:auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.db label{display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:600}
+.db .full{grid-column:1/-1}
+@media(max-width:560px){.db{grid-template-columns:minmax(0,1fr)}}
+.df{padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50;max-width:90vw}
+#toast.on{opacity:1}
+@media(prefers-reduced-motion:reduce){#toast{transition:none}}
+pre,.scroll{overflow-x:auto}
+@media(max-width:600px){.bar{position:static}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal;color:var(--mute)}.stack td:empty{display:none}.wall{height:180px}.mlab{font-size:11px}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="wrap"><header>
+  <h1 id="headline">iWave events &amp; travel 2026</h1>
+  <p class="sub" id="subline">Loading your calendar…</p>
+</header></div>
+<div class="bar"><div class="wrap">
+  <div class="row">
+    <div class="chips" id="months" role="group" aria-label="Filter by month"></div>
+    <input class="search" id="q" type="search" placeholder="Search event, person, region…" aria-label="Search">
+  </div>
+  <div class="row" style="justify-content:space-between">
+    <nav class="tabs" id="tabs">
+      <a href="#overview">Overview</a><a href="#events">Events</a><a href="#travel">Travel</a><a href="#leads">Leads</a>
+    </nav>
+    <div class="row">
+      <button class="btn" id="btnImport">Import Excel</button>
+      <button class="btn" id="btnExport">Export Excel</button>
+      <button class="btn pri" id="btnAdd">+ Add</button>
+      <input type="file" id="file" accept=".xlsx,.xls,.csv" hidden>
+    </div>
+  </div>
+</div></div>
+<div class="wrap">
+  <div id="mode" class="banner" hidden></div>
+
+  <section class="view" id="v-overview">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid2">
+      <div>
+        <h2>Events by month</h2>
+        <div class="wall" id="wall"></div>
+        <div class="mlab" id="mlab"></div>
+        <div class="legend" id="legend"></div>
+        <p class="note">Click a month to filter every tab.</p>
+      </div>
+      <div><h2>Coming up</h2><ul class="list" id="upcoming"></ul></div>
+    </div>
+    <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))">
+      <div><h2>Leads by event</h2><div id="leadbars"></div></div>
+      <div><h2>Who travels most</h2><div id="peoplebars"></div></div>
+      <div><h2>Spend by event (USD)</h2><div id="spendbars"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-events" hidden>
+    <div class="tools">
+      <select id="fCat" aria-label="Category"><option value="">All categories</option></select>
+      <span class="grow"></span><span class="note" id="evCount"></span>
+    </div>
+    <div id="evTable"></div>
+  </section>
+
+  <section class="view" id="v-travel" hidden>
+    <div class="tools">
+      <select id="fPerson" aria-label="Person"><option value="">Everyone</option></select>
+      <select id="fTrip" aria-label="Trip status"><option value="">All trips</option><option>Planned</option><option>Booked</option><option>Completed</option><option>Cancelled</option></select>
+      <span class="grow"></span><span class="note" id="trCount"></span>
+    </div>
+    <div id="trTable"></div>
+  </section>
+
+  <section class="view" id="v-leads" hidden>
+    <div class="tools">
+      <select id="fStage" aria-label="Stage"><option value="">All stages</option><option>New</option><option>Contacted</option><option>Qualified</option><option>Proposal</option><option>Won</option><option>Lost</option></select>
+      <span class="grow"></span><span class="note" id="ldCount"></span>
+    </div>
+    <div id="ldTable"></div>
+  </section>
+</div>
+
+<dialog id="dlg"><form method="dialog" id="dlgForm">
+  <div class="dh"><h2 id="dlgTitle" style="margin:0">Edit</h2><button class="btn" value="cancel" formnovalidate>Close</button></div>
+  <div class="db" id="dlgBody"></div>
+  <div class="df" id="dlgFoot"></div>
+</form></dialog>
+<div id="toast" role="status"></div>
+
+<script>
+{
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const TODAY=new Date().toISOString().slice(0,10);
+const CATS=['Participated – iWave booth','Participated – Partner booth','Visiting','Upcoming – confirmed','Under discussion','Not participated'];
+const CAT_COL={[CATS[0]]:'var(--done)',[CATS[1]]:'var(--plan)',[CATS[2]]:'var(--vis)',[CATS[3]]:'var(--up)',[CATS[4]]:'var(--disc)',[CATS[5]]:'var(--no)'};
+const PART=CATS.slice(0,2);
+/* Turns any wording (old Status/Participation pairs, loose Excel text) into one category */
+function toCat(cat,status,type){
+  const c=String(cat||'').toLowerCase().replace(/[^a-z ]/g,' ');
+  if(c){const exact=CATS.find(x=>x.toLowerCase().replace(/[^a-z ]/g,' ')===c);if(exact)return exact;
+    if(/not|cancel|skip|declin/.test(c))return CATS[5];if(/partner/.test(c))return CATS[1];if(/visit/.test(c))return CATS[2];
+    if(/discuss|tbd|pending|hold/.test(c))return CATS[4];if(/upcoming|confirm|plan|book/.test(c))return CATS[3];if(/particip|done|booth|attend/.test(c))return CATS[0]}
+  const st=String(status||'').toLowerCase(),ty=String(type||'').toLowerCase();
+  if(/not/.test(st))return CATS[5];
+  if(/done|complet|particip/.test(st))return /partner/.test(ty)?CATS[1]:CATS[0];
+  if(/visit/.test(ty))return CATS[2];
+  if(/discuss/.test(st)||/discuss/.test(ty))return CATS[4];
+  if(st||ty)return CATS[3];return '';
+}
+const catOf=e=>e.category||toCat('',e.status,e.type);
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>n?'$'+Math.round(n).toLocaleString('en-US'):'';
+const num=v=>{const n=parseFloat(String(v??'').replace(/[^0-9.\-]/g,''));return isFinite(n)?n:null};
+const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const fmtD=d=>{if(!d)return'';const x=new Date(d+'T00:00:00');return isNaN(x)?d:x.getDate()+' '+MON[x.getMonth()]};
+
+/* Field specs drive tables, forms and Excel columns */
+const SPEC={
+ events:{label:'event',fields:[
+  ['name','Event','text',1],['month','Month','month'],['dates','Dates (as shown)','text'],['start','Start date','date'],['end','End date','date'],
+  ['region','Region / city','text'],['category','Category','select',0,CATS],['attendees','Attendees (comma separated)','list',0,0,1],
+  ['leads','Leads','number'],['contacts','Contacts','number'],['reg','Registration USD','number'],['setup','Booth setup USD','number'],
+  ['mkt','Marketing USD','number'],['logistics','Logistics USD','number'],['travelCost','Travel & stay USD','number'],['booth','Booth no.','text'],
+  ['rev3','Revenue expected 3 mo USD','number'],['rev6','Revenue expected 6 mo USD','number'],['rev12','Revenue expected 1 yr USD','number'],
+  ['feedback','Feedback','textarea',0,0,1],['notes','Notes','textarea',0,0,1]]},
+ travel:{label:'trip',fields:[
+  ['person','Person','text',1],['event','Event','event'],['destination','Destination','text'],['depart','Depart','date'],['ret','Return','date'],
+  ['status','Trip status','select',0,['Planned','Booked','Completed','Cancelled']],['flight','Flight / PNR','text'],['hotel','Hotel','text'],
+  ['visa','Visa','select',0,['','Not needed','Applied','Approved']],['cost','Cost USD','number'],['notes','Notes','textarea',0,0,1]]},
+ leads:{label:'lead',fields:[
+  ['company','Company','text',1],['contact','Contact name','text'],['email','Email','text'],['phone','Phone','text'],['event','Event','event'],
+  ['interest','Product interest','text'],['owner','Owner','text'],['stage','Stage','select',0,['New','Contacted','Qualified','Proposal','Won','Lost']],
+  ['value','Deal value USD','number'],['date','Captured on','date'],['followup','Follow-up date','date'],['notes','Notes','textarea',0,0,1]]}
+};
+const S={events:[],travel:[],leads:[]};
+let db=null,local=false,month=null,tab='overview',canWrite=true;
+
+const total=e=>['reg','setup','mkt','logistics','travelCost'].reduce((a,k)=>a+(num(e[k])||0),0);
+const evByName=n=>S.events.find(e=>e.name===n);
+const loggedLeads=n=>S.leads.filter(l=>l.event===n).length;
+const leadsOf=e=>num(e.leads)??(loggedLeads(e.name)||null);
+const q=()=>$('#q').value.trim().toLowerCase();
+const mOfDate=d=>d?+d.slice(5,7):null;
+const tripMonth=t=>mOfDate(t.depart)??(evByName(t.event)?.month)??t.month??0;
+const leadMonth=l=>(evByName(l.event)?.month)??mOfDate(l.date)??0;
+const mOk=m=>month===null||(+m||0)===month;
+const hit=(o,keys)=>{const s=q();return !s||keys.some(k=>String(Array.isArray(o[k])?o[k].join(' '):o[k]??'').toLowerCase().includes(s))};
+
+function fEvents(){return S.events.filter(e=>mOk(e.month)&&hit(e,['name','region','attendees','category','booth'])&&(!$('#fCat').value||catOf(e)===$('#fCat').value))}
+function fTravel(){return S.travel.filter(t=>mOk(tripMonth(t))&&hit(t,['person','event','destination','notes'])&&(!$('#fPerson').value||t.person===$('#fPerson').value)&&(!$('#fTrip').value||t.status===$('#fTrip').value))}
+function fLeads(){return S.leads.filter(l=>mOk(leadMonth(l))&&hit(l,['company','contact','event','interest','owner','email'])&&(!$('#fStage').value||l.stage===$('#fStage').value))}
+const sortEv=a=>a.sort((x,y)=>((+x.month||13)-(+y.month||13))||String(x.start||'').localeCompare(y.start||''));
+
+/* ---------- render ---------- */
+function render(){
+  $('#months').innerHTML=[['All',null],...MON.map((m,i)=>[m,i+1]),['No date',0]].map(([l,v])=>`<button class="chip" data-m="${v}" aria-pressed="${month===v}">${l}</button>`).join('');
+  const people=[...new Set(S.travel.map(t=>t.person).filter(Boolean))].sort();
+  const fp=$('#fPerson'),cur=fp.value;fp.innerHTML='<option value="">Everyone</option>'+people.map(p=>`<option ${p===cur?'selected':''}>${esc(p)}</option>`).join('');
+  const fc=$('#fCat'),cc=fc.value;fc.innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option ${c===cc?'selected':''}>${c}</option>`).join('');
+  $('#legend').innerHTML=CATS.map(c=>`<span><i class="dot" style="background:${CAT_COL[c]}"></i>${c}</span>`).join('');
+  const ev=fEvents();
+  const scope=month===null?'2026':month===0?'undated events':MON[month-1]+' 2026';
+  const done=ev.filter(e=>PART.includes(catOf(e))).length;
+  const leads=ev.reduce((a,e)=>a+(leadsOf(e)||0),0);
+  $('#headline').textContent=S.events.length?`Participated in ${done} of ${ev.length} events, ${leads.toLocaleString()} leads captured`:'iWave events & travel 2026';
+  $('#subline').textContent=S.events.length?`Showing ${scope}. `+(local?'Saved in this browser.':'Updated live for everyone with access.'):'No events yet: import an Excel file or add your first event.';
+  ({overview:rOverview,events:rEvents,travel:rTravel,leads:rLeads})[tab](ev);
+  $('#btnAdd').textContent='+ Add '+(tab==='overview'?'event':SPEC[tab].label);
+}
+function rOverview(ev){
+  const tr=fTravel(),ld=fLeads();
+  const up=ev.filter(e=>[CATS[2],CATS[3],CATS[4]].includes(catOf(e))&&(e.end||e.start||'9')>=TODAY);const cnt=c=>ev.filter(e=>catOf(e)===c).length;
+  const spend=ev.reduce((a,e)=>a+total(e),0);
+  const k=[['Total events',ev.length],['Participated – iWave booth',cnt(CATS[0])],['Participated – Partner booth',cnt(CATS[1])],['Visiting',cnt(CATS[2])],['Not participated',cnt(CATS[5])],['Upcoming – confirmed',cnt(CATS[3])],['Under discussion',cnt(CATS[4])],['Leads',ev.reduce((a,e)=>a+(leadsOf(e)||0),0).toLocaleString(),'hot'],['Spend',money(spend)||'$0'],['Travellers',new Set(tr.filter(t=>t.status!=='Cancelled').map(t=>t.person)).size]];
+  $('#kpis').innerHTML=k.map(([l,v,c])=>`<div class="kpi ${c||''}"><b>${esc(v)}</b><span>${l}</span></div>`).join('');
+  // month wall uses all filters except month
+  const all=S.events.filter(e=>hit(e,['name','region','attendees','category']));
+  const by=MON.map((_,i)=>all.filter(e=>+e.month===i+1));
+  const max=Math.max(1,...by.map(a=>a.length));
+  const order=CATS;
+  $('#wall').innerHTML=by.map((a,i)=>`<button class="col ${month===i+1?'sel':''}" data-m="${i+1}" aria-label="${MON[i]}: ${a.length} events">${order.map(s=>{const n=a.filter(e=>catOf(e)===s).length;return n?`<div class="seg" title="${s}: ${n}" style="height:calc(${n/max*100}% - 2px);background:${CAT_COL[s]}"></div>`:''}).join('')}</button>`).join('');
+  $('#mlab').innerHTML=by.map((a,i)=>`<span><i>${a.length||''}</i>${MON[i]}</span>`).join('');
+  const nxt=sortEv(up.slice()).slice(0,6);
+  $('#upcoming').innerHTML=nxt.length?nxt.map(e=>`<li><span class="when">${esc(e.start?fmtD(e.start):e.dates||'TBD')}</span><span><b>${esc(e.name)}</b><br><span class="tag">${esc(e.region||'Region TBD')} · <span style="color:${CAT_COL[catOf(e)]};font-weight:700">${esc(catOf(e))}</span>${e.attendees?.length?' · '+esc(e.attendees.join(', ')):''}</span></span></li>`).join(''):'<li class="note" style="display:block">Nothing upcoming in this view.</li>';
+  const bars=(rows,fmt=v=>v)=>{rows=rows.filter(r=>r[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,8);const m=Math.max(1,...rows.map(r=>r[1]));return rows.length?rows.map(([k,v])=>`<div class="hbar"><span class="k" title="${esc(k)}">${esc(k)}</span><span class="t"><div style="width:${v/m*100}%"></div></span><span class="n">${fmt(v)}</span></div>`).join(''):'<p class="note">No figures recorded yet for this view.</p>'};
+  $('#leadbars').innerHTML=bars(ev.map(e=>[e.name,leadsOf(e)||0]));
+  const pc={};tr.filter(t=>t.status!=='Cancelled').forEach(t=>pc[t.person]=(pc[t.person]||0)+1);
+  $('#peoplebars').innerHTML=bars(Object.entries(pc));
+  $('#spendbars').innerHTML=bars(ev.map(e=>[e.name,total(e)]),money);
+}
+const acts=(c,id)=>canWrite?`<td class="act"><button class="btn" data-edit="${c}:${id}">Edit</button> <button class="btn" data-del="${c}:${id}">Delete</button></td>`:'<td></td>';
+const empty=(what)=>`<div class="empty">No ${what} match these filters.${canWrite?' Use <b>+ Add</b> or <b>Import Excel</b> to add some.':''}</div>`;
+function rEvents(ev){
+  ev=sortEv(ev.slice());$('#evCount').textContent=ev.length+' events';
+  $('#evTable').innerHTML=ev.length?`<table class="stack"><thead><tr><th>Month</th><th>Event</th><th>Dates</th><th>Region</th><th>Category</th><th>Attendees</th><th class="num">Leads</th><th class="num">Spend</th><th></th></tr></thead><tbody>${ev.map(e=>`<tr class="click" data-open="events:${e.id}"><td>${e.month?MON[e.month-1]:'—'}</td><td><b>${esc(e.name)}</b>${e.booth?`<br><span class="tag">Booth ${esc(e.booth)}</span>`:''}</td><td style="white-space:nowrap">${esc(e.dates||[fmtD(e.start),fmtD(e.end)].filter(Boolean).join(' – '))}</td><td>${esc(e.region)}</td><td><span class="pill" style="background:${CAT_COL[catOf(e)]||'var(--mute)'}">${esc(catOf(e)||'—')}</span></td><td>${esc((e.attendees||[]).join(', '))}</td><td class="num">${leadsOf(e)??''}</td><td class="num">${money(total(e))}</td>${acts('events',e.id)}</tr>`).join('')}</tbody></table>`:empty('events');
+}
+function rTravel(){
+  const tr=fTravel().sort((a,b)=>String(a.depart||'9').localeCompare(b.depart||'9'));
+  $('#trCount').textContent=`${tr.length} trips · ${new Set(tr.map(t=>t.person)).size} people · ${money(tr.reduce((a,t)=>a+(num(t.cost)||0),0))||'$0'} cost`;
+  const tc={Completed:'var(--done)',Planned:'var(--plan)',Booked:'var(--disc)',Cancelled:'var(--no)'};
+  $('#trTable').innerHTML=tr.length?`<table class="stack"><thead><tr><th>Person</th><th>Event</th><th>Destination</th><th>Depart</th><th>Return</th><th>Status</th><th>Flight / hotel</th><th class="num">Cost</th><th></th></tr></thead><tbody>${tr.map(t=>`<tr class="click" data-open="travel:${t.id}"><td><b>${esc(t.person)}</b></td><td>${esc(t.event)}</td><td>${esc(t.destination)}</td><td style="white-space:nowrap">${fmtD(t.depart)}</td><td style="white-space:nowrap">${fmtD(t.ret)}</td><td><span class="pill" style="background:${tc[t.status]||'var(--mute)'}">${esc(t.status||'—')}</span></td><td class="tag">${esc([t.flight,t.hotel,t.visa&&'Visa: '+t.visa].filter(Boolean).join(' · '))}</td><td class="num">${money(num(t.cost))}</td>${acts('travel',t.id)}</tr>`).join('')}</tbody></table>`:empty('trips');
+}
+function rLeads(){
+  const ld=fLeads().sort((a,b)=>String(b.date||'').localeCompare(a.date||''));
+  const stages=['New','Contacted','Qualified','Proposal','Won','Lost'];
+  $('#ldCount').textContent=stages.map(s=>`${s} ${ld.filter(l=>l.stage===s).length}`).join(' · ')+` · pipeline ${money(ld.filter(l=>l.stage!=='Lost').reduce((a,l)=>a+(num(l.value)||0),0))||'$0'}`;
+  $('#ldTable').innerHTML=ld.length?`<table class="stack"><thead><tr><th>Company</th><th>Contact</th><th>Event</th><th>Interest</th><th>Owner</th><th>Stage</th><th>Follow-up</th><th class="num">Value</th><th></th></tr></thead><tbody>${ld.map(l=>`<tr class="click" data-open="leads:${l.id}"><td><b>${esc(l.company)}</b></td><td>${esc(l.contact)}${l.email?`<br><span class="tag">${esc(l.email)}</span>`:''}</td><td>${esc(l.event)}</td><td>${esc(l.interest)}</td><td>${esc(l.owner)}</td><td>${esc(l.stage)}</td><td style="white-space:nowrap;${l.followup&&l.followup<TODAY&&!['Won','Lost'].includes(l.stage)?'color:var(--no);font-weight:700':''}">${fmtD(l.followup)}</td><td class="num">${money(num(l.value))}</td>${acts('leads',l.id)}</tr>`).join('')}</tbody></table>`:`<div class="empty">No individual leads logged${month!==null?' for this month':''} yet. Event-level lead counts live on each event; log named contacts here with <b>+ Add lead</b> or import a Leads sheet.</div>`;
+}
+
+/* ---------- forms ---------- */
+const dlg=$('#dlg');
+function openForm(c,id){
+  const o=id?S[c].find(x=>x.id===id):{};if(id&&!o)return;
+  const d=Object.assign({},o);if(c==='events'&&!d.category)d.category=catOf(o);
+  if(!id){if(c==='events'){d.category=CATS[3];if(month)d.month=month}if(c==='travel')d.status='Planned';if(c==='leads'){d.stage='New';d.date=TODAY}}
+  $('#dlgTitle').textContent=(id?'Edit ':'Add ')+SPEC[c].label;
+  const evOpts=sortEv(S.events.slice()).map(e=>`<option value="${esc(e.name)}">`).join('');
+  $('#dlgBody').innerHTML=SPEC[c].fields.map(([k,l,t,req,opts,full])=>{
+    const v=d[k];const ro=canWrite?'':'disabled';
+    let inp;
+    if(t==='select')inp=`<select name="${k}" ${ro}>${opts.map(o=>`<option ${o===v?'selected':''} value="${esc(o)}">${esc(o||'—')}</option>`).join('')}</select>`;
+    else if(t==='month')inp=`<select name="${k}" ${ro}><option value="0">No date</option>${MON.map((m,i)=>`<option value="${i+1}" ${+v===i+1?'selected':''}>${m}</option>`).join('')}</select>`;
+    else if(t==='textarea')inp=`<textarea name="${k}" rows="3" ${ro}>${esc(v)}</textarea>`;
+    else if(t==='event')inp=`<input name="${k}" list="evlist" value="${esc(v)}" ${ro}><datalist id="evlist">${evOpts}</datalist>`;
+    else inp=`<input name="${k}" type="${t==='number'?'number" step="any':t==='date'?'date':'text'}" value="${esc(t==='list'?(v||[]).join(', '):v)}" ${req?'required':''} ${ro}>`;
+    return `<label class="${full?'full':''}">${l}${req?' *':''}${inp}</label>`}).join('')+(c==='events'?`<p class="note full">Total spend is calculated from the cost fields.</p>`:'');
+  $('#dlgFoot').innerHTML=canWrite?`${id?`<button class="btn" type="button" data-del="${c}:${id}" style="margin-right:auto">Delete</button>`:''}<button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn pri" value="save">Save</button>`:'<span class="note">You can view but not edit this tracker.</span>';
+  dlg.dataset.c=c;dlg.dataset.id=id||'';dlg.returnValue='';dlg.showModal();
+  if(c==='travel'){const ei=dlg.querySelector('[name=event]');ei.addEventListener('change',()=>{const e=evByName(ei.value);if(!e)return;const f=n=>dlg.querySelector(`[name=${n}]`);if(!f('destination').value)f('destination').value=e.region||'';if(!f('depart').value)f('depart').value=e.start||'';if(!f('ret').value)f('ret').value=e.end||e.start||''})}
+}
+function readForm(c){
+  const out={};for(const [k,,t] of SPEC[c].fields){const el=dlg.querySelector(`[name="${k}"]`);let v=el.value.trim();
+    if(t==='number')v=num(v);else if(t==='month')v=+v;else if(t==='list')v=v.split(',').map(s=>s.trim()).filter(Boolean);
+    if(v!==null&&v!==''&&!(Array.isArray(v)&&!v.length))out[k]=v}
+  if(c==='events'&&out.start&&!out.month)out.month=mOfDate(out.start);
+  return out;
+}
+dlg.addEventListener('close',async()=>{if(dlg.returnValue!=='save')return;const c=dlg.dataset.c;const id=dlg.dataset.id||uid(c[0]);await save(c,id,readForm(c));toast('Saved')});
+
+/* ---------- storage ---------- */
+function persistLocal(){try{localStorage.setItem('iwave-tracker',JSON.stringify(S))}catch(e){}}
+async function save(c,id,data){if(c==='events'){data={...data};delete data.status;delete data.type}
+  const i=S[c].findIndex(x=>x.id===id);const row={...data,id};
+  if(local||!db){if(i>=0)S[c][i]=row;else S[c].push(row);persistLocal();render();return true}
+  try{await db.collection(c).doc(id).set(data);return true}catch(e){return writeErr(e)}
+}
+async function del(c,id){
+  if(local||!db){S[c]=S[c].filter(x=>x.id!==id);persistLocal();render();return}
+  try{await db.collection(c).doc(id).delete()}catch(e){writeErr(e)}
+}
+function writeErr(e){if(e?.code==='invalid_argument'){canWrite=false;render();toast('You have view-only access to this tracker')}else if(e?.code==='quota_exceeded')toast('Storage is full — delete old records first');else toast('Could not save: '+(e?.message||'try again'));return false}
+
+/* ---------- Excel ---------- */
+const sheetName={events:'Events',travel:'Travel',leads:'Leads'};
+function toRows(c,rows){return rows.map(o=>{const r={ID:o.id};for(const [k,l,t] of SPEC[c].fields){let v=c==='events'&&k==='category'?catOf(o):o[k];if(t==='list')v=(v||[]).join(', ');if(t==='month')v=v?MON[v-1]:'';r[l.replace(' (comma separated)','').replace(' (as shown)','')]=v??''}if(c==='events')r['Total USD']=total(o)||'';return r})}
+async function exportXlsx(filtered){
+  if(!window.XLSX)return toast('Excel library did not load — check your connection');
+  const wb=XLSX.utils.book_new();
+  const data={events:filtered?fEvents():S.events,travel:filtered?fTravel():S.travel,leads:filtered?fLeads():S.leads};
+  for(const c of ['events','travel','leads']){const rows=toRows(c,c==='events'?sortEv(data[c].slice()):data[c]);
+    const ws=rows.length?XLSX.utils.json_to_sheet(rows):XLSX.utils.aoa_to_sheet([['ID',...SPEC[c].fields.map(f=>f[1].replace(' (comma separated)','').replace(' (as shown)',''))]]);
+    ws['!cols']=Object.keys(rows[0]||{ID:1}).map(k=>({wch:Math.min(40,Math.max(10,k.length+2))}));XLSX.utils.book_append_sheet(wb,ws,sheetName[c])}
+  const evs=data.events,sum=[['Category',...MON,'No date','Total']];
+  for(const c of CATS){const r=[c];for(let m=1;m<=12;m++)r.push(evs.filter(e=>catOf(e)===c&&+e.month===m).length);r.push(evs.filter(e=>catOf(e)===c&&!+e.month).length,evs.filter(e=>catOf(e)===c).length);sum.push(r)}
+  sum.push(['Total',...MON.map((_,i)=>evs.filter(e=>+e.month===i+1).length),evs.filter(e=>!+e.month).length,evs.length]);
+  sum.push([]);sum.push(['Leads',...MON.map((_,i)=>evs.filter(e=>+e.month===i+1).reduce((a,e)=>a+(leadsOf(e)||0),0)),evs.filter(e=>!+e.month).reduce((a,e)=>a+(leadsOf(e)||0),0),evs.reduce((a,e)=>a+(leadsOf(e)||0),0)]);
+  sum.push(['Spend USD',...MON.map((_,i)=>Math.round(evs.filter(e=>+e.month===i+1).reduce((a,e)=>a+total(e),0))),Math.round(evs.filter(e=>!+e.month).reduce((a,e)=>a+total(e),0)),Math.round(evs.reduce((a,e)=>a+total(e),0))]);
+  const ss=XLSX.utils.aoa_to_sheet(sum);ss['!cols']=[{wch:30},...Array(14).fill({wch:8})];XLSX.utils.book_append_sheet(wb,ss,'Summary');
+  wb.SheetNames.unshift(wb.SheetNames.pop());
+  const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+  const name=`iWave_Events_Travel_2026${filtered&&month!==null?'_'+(month?MON[month-1]:'NoDate'):''}.xlsx`;
+  const dl=await (window.claude?.use?.('downloads')??Promise.resolve(null)).catch(()=>null);
+  if(!dl){try{XLSX.writeFile(wb,name);toast('Excel downloaded')}catch(e){toast('Downloads are not available in this view')}return}
+  try{await dl.save({filename:name,data:new Blob([buf])});toast('Excel saved')}catch(e){if(e?.code!=='declined')toast('Download failed: '+(e?.message||e?.code))}
+}
+const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
+function fromRows(c,rows){
+  const map={};for(const [k,l] of SPEC[c].fields){map[norm(l)]=k;map[norm(l.replace(/ \(.*\)/,''))]=k;map[norm(k)]=k}
+  Object.assign(map,{id:'id',city:'region',country:'region',participationtype:'type',name:c==='travel'?'person':c==='leads'?'contact':'name',traveller:'person',employee:'person',returndate:'ret',departdate:'depart',from:'depart',to:'ret',eventname:'event',totalusd:'_total',total:'_total',status:'_status',participation:'_type',participationtype:'_type',type:'_type',category:'category'});
+  return rows.map(r=>{const o={};for(const [h,v] of Object.entries(r)){const k=map[norm(h)];if(!k||v===''||v==null)continue;
+    const f=SPEC[c].fields.find(x=>x[0]===k);let val=v;
+    if(v instanceof Date)val=new Date(v.getTime()-v.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+    if(f){if(f[2]==='number')val=num(val);else if(f[2]==='list')val=String(val).split(/[,;\/]/).map(s=>s.trim()).filter(Boolean);
+      else if(f[2]==='month'){const s=String(val).slice(0,3).toLowerCase();val=MON.findIndex(m=>m.toLowerCase()===s)+1||(+val||0)}
+      else if(f[2]==='date'&&!(v instanceof Date)){const d=new Date(val);val=isNaN(d)?String(val):new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)}
+      else val=String(val).trim()}
+    if(val!==null&&val!=='')o[k]=val}
+    if(c==='events'){o.category=toCat(o.category,o._status,o._type)||CATS[3];delete o._status;delete o._type}
+    if(c==='events'&&!o.month&&o.start)o.month=mOfDate(o.start);
+    const req=SPEC[c].fields.find(f=>f[3])[0];return o[req]?o:null}).filter(Boolean);
+}
+function guess(name,rows){const n=name.toLowerCase();if(n.includes('summary'))return null;if(n.includes('travel')||n.includes('trip'))return'travel';if(n.includes('lead'))return'leads';if(n.includes('event')||n.includes('calendar'))return'events';
+  const h=Object.keys(rows[0]||{}).map(norm);if(h.some(x=>['person','traveller','depart','departdate'].includes(x)))return'travel';if(h.includes('company'))return'leads';return'events'}
+async function handleFile(f){
+  if(!window.XLSX)return toast('Excel library did not load — check your connection');
+  let wb;try{wb=XLSX.read(await f.arrayBuffer(),{cellDates:true})}catch(e){return toast('Could not read that file')}
+  const found={events:[],travel:[],leads:[]};
+  for(const n of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[n],{defval:''});if(!rows.length)continue;const c=guess(n,rows);if(!c)continue;found[c].push(...fromRows(c,rows))}
+  const tot=found.events.length+found.travel.length+found.leads.length;
+  $('#dlgTitle').textContent='Import '+f.name;
+  const upd=c=>found[c].filter(o=>o.id&&S[c].some(x=>x.id===o.id)).length;
+  $('#dlgBody').innerHTML=tot?`<div class="full"><p>Found <b>${found.events.length}</b> events, <b>${found.travel.length}</b> trips and <b>${found.leads.length}</b> leads.</p><p class="note">Rows whose ID matches an existing record update it (${upd('events')+upd('travel')+upd('leads')} rows); all others are added as new. Sheets are matched by name (Events, Travel, Leads) or by their columns. Tip: export first to get a template with the right columns.</p></div>`:`<p class="full">No usable rows found. Each sheet needs a header row with at least an <b>Event</b>, <b>Person</b> or <b>Company</b> column.</p>`;
+  $('#dlgFoot').innerHTML=`<button class="btn" value="cancel">Cancel</button>${tot?'<button class="btn pri" type="button" id="doImport">Import '+tot+' rows</button>':''}`;
+  dlg.dataset.c='';dlg.returnValue='';dlg.showModal();
+  $('#doImport')?.addEventListener('click',async ev=>{ev.target.disabled=true;let n=0;
+    for(const c of ['events','travel','leads'])for(const o of found[c]){const id=o.id&&/^[\w\-.~:@+]{1,120}$/.test(o.id)?o.id:uid(c[0]);const d={...o};delete d.id;delete d._total;if(await save(c,id,d))n++;ev.target.textContent=`Importing ${n}/${tot}…`}
+    dlg.close();toast(`Imported ${n} rows`)});
+}
+
+/* ---------- events & wiring ---------- */
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2600)}
+function route(){tab=['overview','events','travel','leads'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
+  document.querySelectorAll('section.view').forEach(s=>s.hidden=s.id!=='v-'+tab);
+  document.querySelectorAll('#tabs a').forEach(a=>a.setAttribute('aria-current',a.getAttribute('href')==='#'+tab?'page':'false'));render()}
+addEventListener('hashchange',route);
+document.addEventListener('click',e=>{
+  const m=e.target.closest('[data-m]');if(m){const v=m.dataset.m==='null'?null:+m.dataset.m;month=(month===v&&m.classList.contains('col'))?null:v;render();return}
+  const ed=e.target.closest('[data-edit]');if(ed){const [c,id]=ed.dataset.edit.split(':');openForm(c,id);return}
+  const dl=e.target.closest('[data-del]');if(dl){const [c,id]=dl.dataset.del.split(':');const o=S[c].find(x=>x.id===id);
+    if(dl.dataset.sure){if(dlg.open)dlg.close();del(c,id);toast('Deleted');return}
+    dl.dataset.sure=1;dl.textContent='Confirm delete';dl.style.background='var(--no)';dl.style.color='#fff';setTimeout(()=>{if(dl.isConnected){delete dl.dataset.sure;dl.textContent='Delete';dl.style.background='';dl.style.color=''}},3000);return}
+  const op=e.target.closest('[data-open]');if(op&&!e.target.closest('button')){const [c,id]=op.dataset.open.split(':');openForm(c,id)}
+});
+$('#q').addEventListener('input',render);
+['#fCat','#fPerson','#fTrip','#fStage'].forEach(s=>$(s).addEventListener('change',render));
+$('#btnAdd').addEventListener('click',()=>{if(!canWrite)return toast('You have view-only access');openForm(tab==='overview'?'events':tab)});
+$('#btnImport').addEventListener('click',()=>{if(!canWrite)return toast('You have view-only access');$('#file').value='';$('#file').click()});
+$('#file').addEventListener('change',e=>{const f=e.target.files[0];if(f)handleFile(f)});
+$('#btnExport').addEventListener('click',()=>{
+  $('#dlgTitle').textContent='Export to Excel';
+  $('#dlgBody').innerHTML=`<p class="full">One workbook with a Summary sheet (events per category per month) plus Events, Travel and Leads sheets. Edit it in Excel and import it back — rows keep their IDs so changes update the right records.</p>`;
+  $('#dlgFoot').innerHTML=`<button class="btn" value="cancel">Cancel</button><button class="btn" type="button" id="xF">Current filter${month!==null?' ('+(month?MON[month-1]:'No date')+')':''}</button><button class="btn pri" type="button" id="xA">All data</button>`;
+  dlg.dataset.c='';dlg.returnValue='';dlg.showModal();
+  $('#xF').onclick=()=>{dlg.close();exportXlsx(true)};$('#xA').onclick=()=>{dlg.close();exportXlsx(false)};
+});
+
+function goLocal(why){local=true;try{Object.assign(S,JSON.parse(localStorage.getItem('iwave-tracker'))||{})}catch(e){}
+  const b=$('#mode');b.hidden=false;b.textContent=why+' Changes are kept in this browser only — use Export Excel to back up or share.';render()}
+route();
+const timer=setTimeout(()=>{if(!db)goLocal('Shared storage could not be reached.')},10000);
+(async()=>{
+  try{db=window.claude?.use?await claude.use('db'):null}catch(e){db=null}
+  if(local)return;clearTimeout(timer);
+  if(!db)return goLocal(window.claude?'Shared storage is not available in this view.':'Standalone copy: import your Excel file to load data.');
+  try{const u=await claude.use('user').catch(()=>null);const w=u&&await u.can?.('data.write');if(w===false)canWrite=false}catch(e){}
+  let first=true;const slow=setTimeout(()=>{const b=$('#mode');b.hidden=false;b.textContent='Still connecting to shared data — figures may be out of date.'},10000);
+  for(const c of ['events','travel','leads'])db.collection(c).onSnapshot(s=>{S[c]=s.docs.map(d=>({...d.data(),id:d.id}));if(!s.metadata.fromCache){clearTimeout(slow);$('#mode').hidden=true}render()},e=>{clearTimeout(slow);const b=$('#mode');b.hidden=false;b.textContent='Lost connection to shared data. Reload the page to reconnect.'});
+})();
+}
+</script>
+</body>
+</html>
