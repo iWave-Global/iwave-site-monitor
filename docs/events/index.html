@@ -244,6 +244,8 @@ function render(){
   const leads=ev.reduce((a,e)=>a+(leadsOf(e)||0),0);
   $('#headline').textContent=S.events.length?`Participated in ${done} of ${ev.length} events, ${leads.toLocaleString()} leads captured`:'iWave events & travel 2026';
   $('#subline').textContent=S.events.length?`Showing ${scope}. `+(local?'Saved in this browser.':'Updated live for everyone with access.'):'No events yet: import an Excel file or add your first event.';
+  $('#btnAdd').hidden=$('#btnImport').hidden=!canWrite;
+  if(!canWrite&&S.events.length)$('#subline').textContent+=' View only — contact the owner to make changes.';
   ({overview:rOverview,events:rEvents,travel:rTravel,leads:rLeads})[tab](ev);
   $('#btnAdd').textContent='+ Add '+(tab==='overview'?'event':SPEC[tab].label);
 }
@@ -369,7 +371,7 @@ function fromRows(c,rows){
     if(c==='events'&&!o.month&&o.start)o.month=mOfDate(o.start);
     const req=SPEC[c].fields.find(f=>f[3])[0];return o[req]?o:null}).filter(Boolean);
 }
-function guess(name,rows){const n=name.toLowerCase();if(n.includes('summary'))return null;if(n.includes('travel')||n.includes('trip'))return'travel';if(n.includes('lead'))return'leads';if(n.includes('event')||n.includes('calendar'))return'events';
+function guess(name,rows){const n=name.toLowerCase();if(/summary|read ?me|how to|instruction/.test(n))return null;if(n.includes('travel')||n.includes('trip'))return'travel';if(n.includes('lead'))return'leads';if(n.includes('event')||n.includes('calendar'))return'events';
   const h=Object.keys(rows[0]||{}).map(norm);if(h.some(x=>['person','traveller','depart','departdate'].includes(x)))return'travel';if(h.includes('company'))return'leads';return'events'}
 async function handleFile(f){
   if(!window.XLSX)return toast('Excel library did not load — check your connection');
@@ -414,15 +416,25 @@ $('#btnExport').addEventListener('click',()=>{
   $('#xF').onclick=()=>{dlg.close();exportXlsx(true)};$('#xA').onclick=()=>{dlg.close();exportXlsx(false)};
 });
 
+async function loadFile(){
+  try{if(!window.XLSX)return false;const r=await fetch('data.xlsx?v='+Date.now(),{cache:'no-store'});if(!r.ok)return false;
+    const wb=XLSX.read(await r.arrayBuffer(),{cellDates:true});const f={events:[],travel:[],leads:[]};
+    for(const n of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[n],{defval:''});if(!rows.length)continue;const c=guess(n,rows);if(c)f[c].push(...fromRows(c,rows))}
+    for(const c in f)S[c]=f[c].map((o,i)=>({...o,id:o.id||c[0]+'x'+i}));
+    local=true;canWrite=false;const lm=r.headers.get('last-modified');
+    const b=$('#mode');b.hidden=false;b.textContent='View only. Data comes from data.xlsx'+(lm?', last updated '+new Date(lm).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}):'')+'.';
+    render();return true}catch(e){return false}
+}
 function goLocal(why){local=true;try{Object.assign(S,JSON.parse(localStorage.getItem('iwave-tracker'))||{})}catch(e){}
   const b=$('#mode');b.hidden=false;b.textContent=why+' Changes are kept in this browser only — use Export Excel to back up or share.';render()}
 route();
 const timer=setTimeout(()=>{if(!db)goLocal('Shared storage could not be reached.')},10000);
 (async()=>{
+  if(!window.claude){clearTimeout(timer);if(await loadFile())return;return goLocal('Standalone copy: import your Excel file to load data.')}
   try{db=window.claude?.use?await claude.use('db'):null}catch(e){db=null}
   if(local)return;clearTimeout(timer);
   if(!db)return goLocal(window.claude?'Shared storage is not available in this view.':'Standalone copy: import your Excel file to load data.');
-  try{const u=await claude.use('user').catch(()=>null);const w=u&&await u.can?.('data.write');if(w===false)canWrite=false}catch(e){}
+  try{const u=await claude.use('user').catch(()=>null);if(u){const own=await u.isOwner?.().catch(()=>null);const w=await u.can?.('data.write').catch(()=>null);if(own===false||w===false)canWrite=false}}catch(e){}
   let first=true;const slow=setTimeout(()=>{const b=$('#mode');b.hidden=false;b.textContent='Still connecting to shared data — figures may be out of date.'},10000);
   for(const c of ['events','travel','leads'])db.collection(c).onSnapshot(s=>{S[c]=s.docs.map(d=>({...d.data(),id:d.id}));if(!s.metadata.fromCache){clearTimeout(slow);$('#mode').hidden=true}render()},e=>{clearTimeout(slow);const b=$('#mode');b.hidden=false;b.textContent='Lost connection to shared data. Reload the page to reconnect.'});
 })();
