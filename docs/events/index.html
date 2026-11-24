@@ -31,7 +31,13 @@ button,select,input,textarea{font:inherit;color:inherit}
 .btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .btn:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--y);outline-offset:1px}
 input,select,textarea{min-height:40px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:6px 10px;font-size:16px}
-.search{flex:1 1 200px}
+.srow{margin-top:8px}
+.sbox{flex:1 1 320px;position:relative}.sbox svg{position:absolute;left:12px;top:50%;width:18px;height:18px;transform:translateY(-50%);color:var(--mute)}
+.sbox input{width:100%;padding-left:38px;min-height:44px;font-weight:500}
+.srow select{flex:0 1 190px}
+.hits{margin-top:8px;font-size:14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.hits a{padding:4px 10px;border-radius:999px;background:var(--y);color:#101418;font-weight:700;text-decoration:none}
+mark{background:var(--y);color:#101418;border-radius:2px;padding:0 1px}
 nav.tabs{display:flex;gap:2px;margin-top:10px;overflow-x:auto}
 nav.tabs a{flex:none;padding:10px 14px;text-decoration:none;color:var(--mute);font-weight:700;border-bottom:3px solid transparent}
 nav.tabs a[aria-current=page]{color:var(--ink);border-color:var(--ink)}
@@ -84,7 +90,7 @@ dialog::backdrop{background:#10141899}
 #toast.on{opacity:1}
 @media(prefers-reduced-motion:reduce){#toast{transition:none}}
 pre,.scroll{overflow-x:auto}
-@media(max-width:600px){.bar{position:static}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal;color:var(--mute)}.stack td:empty{display:none}.wall{height:180px}.mlab{font-size:11px}}
+@media(max-width:600px){.bar{position:static}.srow select{flex:1 1 45%}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal;color:var(--mute)}.stack td:empty{display:none}.wall{height:180px}.mlab{font-size:11px}}
 </style>
 <script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -97,8 +103,16 @@ pre,.scroll{overflow-x:auto}
 <div class="bar"><div class="wrap">
   <div class="row">
     <div class="chips" id="months" role="group" aria-label="Filter by month"></div>
-    <input class="search" id="q" type="search" placeholder="Search event, person, region…" aria-label="Search">
   </div>
+  <div class="row srow">
+    <div class="sbox"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input id="q" type="search" placeholder="Search events, people, countries, booth, notes…  (press /)" aria-label="Search" autocomplete="off"></div>
+    <select id="fCat" aria-label="Category"><option value="">All categories</option></select>
+    <select id="fCountry" aria-label="Country"><option value="">All countries</option></select>
+    <select id="fPerson" aria-label="Person"><option value="">Everyone</option></select>
+    <button class="btn" id="btnReset" hidden>Clear filters</button>
+  </div>
+  <div id="hits" class="hits" hidden></div>
   <div class="row" style="justify-content:space-between">
     <nav class="tabs" id="tabs">
       <a href="#overview">Overview</a><a href="#events">Events</a><a href="#travel">Travel</a><a href="#leads">Leads</a>
@@ -106,6 +120,7 @@ pre,.scroll{overflow-x:auto}
     <div class="row">
       <button class="btn" id="btnImport">Import Excel</button>
       <button class="btn" id="btnExport">Export Excel</button>
+      <button class="btn" id="btnTpl">Excel template</button>
       <button class="btn pri" id="btnAdd">+ Add</button>
       <input type="file" id="file" accept=".xlsx,.xls,.csv" hidden>
     </div>
@@ -135,7 +150,6 @@ pre,.scroll{overflow-x:auto}
 
   <section class="view" id="v-events" hidden>
     <div class="tools">
-      <select id="fCat" aria-label="Category"><option value="">All categories</option></select>
       <span class="grow"></span><span class="note" id="evCount"></span>
     </div>
     <div id="evTable"></div>
@@ -143,7 +157,6 @@ pre,.scroll{overflow-x:auto}
 
   <section class="view" id="v-travel" hidden>
     <div class="tools">
-      <select id="fPerson" aria-label="Person"><option value="">Everyone</option></select>
       <select id="fTrip" aria-label="Trip status"><option value="">All trips</option><option>Planned</option><option>Booked</option><option>Completed</option><option>Cancelled</option></select>
       <span class="grow"></span><span class="note" id="trCount"></span>
     </div>
@@ -213,37 +226,50 @@ const SPEC={
   ['value','Deal value USD','number'],['date','Captured on','date'],['followup','Follow-up date','date'],['notes','Notes','textarea',0,0,1]]}
 };
 const S={events:[],travel:[],leads:[]};
-let db=null,local=false,month=null,tab='overview',canWrite=true;
+let db=null,local=false,fileMode=false,month=null,tab='overview',canWrite=true;
 
 const total=e=>['reg','setup','mkt','logistics','travelCost'].reduce((a,k)=>a+(num(e[k])||0),0);
 const evByName=n=>S.events.find(e=>e.name===n);
 const loggedLeads=n=>S.leads.filter(l=>l.event===n).length;
 const leadsOf=e=>num(e.leads)??(loggedLeads(e.name)||null);
 const q=()=>$('#q').value.trim().toLowerCase();
+const countryOf=r=>{r=String(r||'').trim();if(!r)return'';if(r.includes('/'))return r.split('/')[0].trim();const p=r.split(',');return p[p.length-1].trim()};
+const fv=id=>$(id).value;
+const hl=v=>{const t=esc(v),k=q();if(!k||k.length<2)return t;const i=t.toLowerCase().indexOf(esc(k));return i<0?t:t.slice(0,i)+'<mark>'+t.slice(i,i+esc(k).length)+'</mark>'+t.slice(i+esc(k).length)};
 const mOfDate=d=>d?+d.slice(5,7):null;
 const tripMonth=t=>mOfDate(t.depart)??(evByName(t.event)?.month)??t.month??0;
 const leadMonth=l=>(evByName(l.event)?.month)??mOfDate(l.date)??0;
 const mOk=m=>month===null||(+m||0)===month;
 const hit=(o,keys)=>{const s=q();return !s||keys.some(k=>String(Array.isArray(o[k])?o[k].join(' '):o[k]??'').toLowerCase().includes(s))};
 
-function fEvents(){return S.events.filter(e=>mOk(e.month)&&hit(e,['name','region','attendees','category','booth'])&&(!$('#fCat').value||catOf(e)===$('#fCat').value))}
-function fTravel(){return S.travel.filter(t=>mOk(tripMonth(t))&&hit(t,['person','event','destination','notes'])&&(!$('#fPerson').value||t.person===$('#fPerson').value)&&(!$('#fTrip').value||t.status===$('#fTrip').value))}
-function fLeads(){return S.leads.filter(l=>mOk(leadMonth(l))&&hit(l,['company','contact','event','interest','owner','email'])&&(!$('#fStage').value||l.stage===$('#fStage').value))}
+const evOk=e=>(!fv('#fCat')||catOf(e)===fv('#fCat'))&&(!fv('#fCountry')||countryOf(e.region)===fv('#fCountry'))&&(!fv('#fPerson')||(e.attendees||[]).includes(fv('#fPerson')));
+const EVK=['name','region','attendees','category','booth','dates','notes','feedback'];
+function fEvents(){return S.events.filter(e=>mOk(e.month)&&hit(e,EVK)&&evOk(e))}
+const trOk=t=>{const e=evByName(t.event);return (!fv('#fPerson')||t.person===fv('#fPerson'))&&(!fv('#fCountry')||countryOf(t.destination||e?.region)===fv('#fCountry'))&&(!fv('#fCat')||(e&&catOf(e)===fv('#fCat')))};
+const TRK=['person','event','destination','notes','flight','hotel','status'];
+function fTravel(){return S.travel.filter(t=>mOk(tripMonth(t))&&hit(t,TRK)&&trOk(t)&&(!fv('#fTrip')||t.status===fv('#fTrip')))}
+const ldOk=l=>{const e=evByName(l.event);return (!fv('#fPerson')||l.owner===fv('#fPerson'))&&(!fv('#fCountry')||countryOf(e?.region)===fv('#fCountry'))&&(!fv('#fCat')||(e&&catOf(e)===fv('#fCat')))};
+const LDK=['company','contact','event','interest','owner','email','phone','notes','stage'];
+function fLeads(){return S.leads.filter(l=>mOk(leadMonth(l))&&hit(l,LDK)&&ldOk(l)&&(!fv('#fStage')||l.stage===fv('#fStage')))}
 const sortEv=a=>a.sort((x,y)=>((+x.month||13)-(+y.month||13))||String(x.start||'').localeCompare(y.start||''));
 
 /* ---------- render ---------- */
 function render(){
   $('#months').innerHTML=[['All',null],...MON.map((m,i)=>[m,i+1]),['No date',0]].map(([l,v])=>`<button class="chip" data-m="${v}" aria-pressed="${month===v}">${l}</button>`).join('');
-  const people=[...new Set(S.travel.map(t=>t.person).filter(Boolean))].sort();
-  const fp=$('#fPerson'),cur=fp.value;fp.innerHTML='<option value="">Everyone</option>'+people.map(p=>`<option ${p===cur?'selected':''}>${esc(p)}</option>`).join('');
-  const fc=$('#fCat'),cc=fc.value;fc.innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option ${c===cc?'selected':''}>${c}</option>`).join('');
+  const fill=(id,all,list)=>{const el=$(id),cur=el.value;el.innerHTML=`<option value="">${all}</option>`+list.map(p=>`<option ${p===cur?'selected':''}>${esc(p)}</option>`).join('')};
+  fill('#fPerson','Everyone',[...new Set([...S.travel.map(t=>t.person),...S.events.flatMap(e=>e.attendees||[])].filter(Boolean))].sort());
+  fill('#fCountry','All countries',[...new Set([...S.events.map(e=>countryOf(e.region)),...S.travel.map(t=>countryOf(t.destination))].filter(Boolean))].sort());
+  fill('#fCat','All categories',CATS);
+  const active=q()||fv('#fCat')||fv('#fCountry')||fv('#fPerson');$('#btnReset').hidden=!active;
+  const hb=$('#hits');if(active){const ne=fEvents().length,nt=fTravel().length,nl=fLeads().length;hb.hidden=false;
+    hb.innerHTML=`<span>Found</span><a href="#events">${ne} event${ne===1?'':'s'}</a><a href="#travel">${nt} trip${nt===1?'':'s'}</a><a href="#leads">${nl} lead${nl===1?'':'s'}</a><span class="note">${[q()&&'“'+esc(q())+'”',fv('#fCat'),fv('#fCountry'),fv('#fPerson')].filter(Boolean).join(' · ')}${month!==null?' · '+(month?MON[month-1]:'No date'):''}</span>`}else hb.hidden=true;
   $('#legend').innerHTML=CATS.map(c=>`<span><i class="dot" style="background:${CAT_COL[c]}"></i>${c}</span>`).join('');
   const ev=fEvents();
   const scope=month===null?'2026':month===0?'undated events':MON[month-1]+' 2026';
   const done=ev.filter(e=>PART.includes(catOf(e))).length;
   const leads=ev.reduce((a,e)=>a+(leadsOf(e)||0),0);
   $('#headline').textContent=S.events.length?`Participated in ${done} of ${ev.length} events, ${leads.toLocaleString()} leads captured`:'iWave events & travel 2026';
-  $('#subline').textContent=S.events.length?`Showing ${scope}. `+(local?'Saved in this browser.':'Updated live for everyone with access.'):'No events yet: import an Excel file or add your first event.';
+  $('#subline').textContent=S.events.length?`Showing ${scope}. `+(fileMode?'':local?'Saved in this browser.':'Updated live for everyone with access.'):'No events yet: import an Excel file or add your first event.';
   $('#btnAdd').hidden=$('#btnImport').hidden=!canWrite;
   if(!canWrite&&S.events.length)$('#subline').textContent+=' View only — contact the owner to make changes.';
   ({overview:rOverview,events:rEvents,travel:rTravel,leads:rLeads})[tab](ev);
@@ -256,7 +282,7 @@ function rOverview(ev){
   const k=[['Total events',ev.length],['Participated – iWave booth',cnt(CATS[0])],['Participated – Partner booth',cnt(CATS[1])],['Visiting',cnt(CATS[2])],['Not participated',cnt(CATS[5])],['Upcoming – confirmed',cnt(CATS[3])],['Under discussion',cnt(CATS[4])],['Leads',ev.reduce((a,e)=>a+(leadsOf(e)||0),0).toLocaleString(),'hot'],['Spend',money(spend)||'$0'],['Travellers',new Set(tr.filter(t=>t.status!=='Cancelled').map(t=>t.person)).size]];
   $('#kpis').innerHTML=k.map(([l,v,c])=>`<div class="kpi ${c||''}"><b>${esc(v)}</b><span>${l}</span></div>`).join('');
   // month wall uses all filters except month
-  const all=S.events.filter(e=>hit(e,['name','region','attendees','category']));
+  const all=S.events.filter(e=>hit(e,EVK)&&evOk(e));
   const by=MON.map((_,i)=>all.filter(e=>+e.month===i+1));
   const max=Math.max(1,...by.map(a=>a.length));
   const order=CATS;
@@ -274,19 +300,19 @@ const acts=(c,id)=>canWrite?`<td class="act"><button class="btn" data-edit="${c}
 const empty=(what)=>`<div class="empty">No ${what} match these filters.${canWrite?' Use <b>+ Add</b> or <b>Import Excel</b> to add some.':''}</div>`;
 function rEvents(ev){
   ev=sortEv(ev.slice());$('#evCount').textContent=ev.length+' events';
-  $('#evTable').innerHTML=ev.length?`<table class="stack"><thead><tr><th>Month</th><th>Event</th><th>Dates</th><th>Region</th><th>Category</th><th>Attendees</th><th class="num">Leads</th><th class="num">Spend</th><th></th></tr></thead><tbody>${ev.map(e=>`<tr class="click" data-open="events:${e.id}"><td>${e.month?MON[e.month-1]:'—'}</td><td><b>${esc(e.name)}</b>${e.booth?`<br><span class="tag">Booth ${esc(e.booth)}</span>`:''}</td><td style="white-space:nowrap">${esc(e.dates||[fmtD(e.start),fmtD(e.end)].filter(Boolean).join(' – '))}</td><td>${esc(e.region)}</td><td><span class="pill" style="background:${CAT_COL[catOf(e)]||'var(--mute)'}">${esc(catOf(e)||'—')}</span></td><td>${esc((e.attendees||[]).join(', '))}</td><td class="num">${leadsOf(e)??''}</td><td class="num">${money(total(e))}</td>${acts('events',e.id)}</tr>`).join('')}</tbody></table>`:empty('events');
+  $('#evTable').innerHTML=ev.length?`<table class="stack"><thead><tr><th>Month</th><th>Event</th><th>Dates</th><th>Region</th><th>Category</th><th>Attendees</th><th class="num">Leads</th><th class="num">Spend</th><th></th></tr></thead><tbody>${ev.map(e=>`<tr class="click" data-open="events:${e.id}"><td>${e.month?MON[e.month-1]:'—'}</td><td><b>${hl(e.name)}</b>${e.booth?`<br><span class="tag">Booth ${esc(e.booth)}</span>`:''}</td><td style="white-space:nowrap">${esc(e.dates||[fmtD(e.start),fmtD(e.end)].filter(Boolean).join(' – '))}</td><td>${hl(e.region)}</td><td><span class="pill" style="background:${CAT_COL[catOf(e)]||'var(--mute)'}">${esc(catOf(e)||'—')}</span></td><td>${hl((e.attendees||[]).join(', '))}</td><td class="num">${leadsOf(e)??''}</td><td class="num">${money(total(e))}</td>${acts('events',e.id)}</tr>`).join('')}</tbody></table>`:empty('events');
 }
 function rTravel(){
   const tr=fTravel().sort((a,b)=>String(a.depart||'9').localeCompare(b.depart||'9'));
   $('#trCount').textContent=`${tr.length} trips · ${new Set(tr.map(t=>t.person)).size} people · ${money(tr.reduce((a,t)=>a+(num(t.cost)||0),0))||'$0'} cost`;
   const tc={Completed:'var(--done)',Planned:'var(--plan)',Booked:'var(--disc)',Cancelled:'var(--no)'};
-  $('#trTable').innerHTML=tr.length?`<table class="stack"><thead><tr><th>Person</th><th>Event</th><th>Destination</th><th>Depart</th><th>Return</th><th>Status</th><th>Flight / hotel</th><th class="num">Cost</th><th></th></tr></thead><tbody>${tr.map(t=>`<tr class="click" data-open="travel:${t.id}"><td><b>${esc(t.person)}</b></td><td>${esc(t.event)}</td><td>${esc(t.destination)}</td><td style="white-space:nowrap">${fmtD(t.depart)}</td><td style="white-space:nowrap">${fmtD(t.ret)}</td><td><span class="pill" style="background:${tc[t.status]||'var(--mute)'}">${esc(t.status||'—')}</span></td><td class="tag">${esc([t.flight,t.hotel,t.visa&&'Visa: '+t.visa].filter(Boolean).join(' · '))}</td><td class="num">${money(num(t.cost))}</td>${acts('travel',t.id)}</tr>`).join('')}</tbody></table>`:empty('trips');
+  $('#trTable').innerHTML=tr.length?`<table class="stack"><thead><tr><th>Person</th><th>Event</th><th>Destination</th><th>Depart</th><th>Return</th><th>Status</th><th>Flight / hotel</th><th class="num">Cost</th><th></th></tr></thead><tbody>${tr.map(t=>`<tr class="click" data-open="travel:${t.id}"><td><b>${hl(t.person)}</b></td><td>${hl(t.event)}</td><td>${hl(t.destination)}</td><td style="white-space:nowrap">${fmtD(t.depart)}</td><td style="white-space:nowrap">${fmtD(t.ret)}</td><td><span class="pill" style="background:${tc[t.status]||'var(--mute)'}">${esc(t.status||'—')}</span></td><td class="tag">${esc([t.flight,t.hotel,t.visa&&'Visa: '+t.visa].filter(Boolean).join(' · '))}</td><td class="num">${money(num(t.cost))}</td>${acts('travel',t.id)}</tr>`).join('')}</tbody></table>`:empty('trips');
 }
 function rLeads(){
   const ld=fLeads().sort((a,b)=>String(b.date||'').localeCompare(a.date||''));
   const stages=['New','Contacted','Qualified','Proposal','Won','Lost'];
   $('#ldCount').textContent=stages.map(s=>`${s} ${ld.filter(l=>l.stage===s).length}`).join(' · ')+` · pipeline ${money(ld.filter(l=>l.stage!=='Lost').reduce((a,l)=>a+(num(l.value)||0),0))||'$0'}`;
-  $('#ldTable').innerHTML=ld.length?`<table class="stack"><thead><tr><th>Company</th><th>Contact</th><th>Event</th><th>Interest</th><th>Owner</th><th>Stage</th><th>Follow-up</th><th class="num">Value</th><th></th></tr></thead><tbody>${ld.map(l=>`<tr class="click" data-open="leads:${l.id}"><td><b>${esc(l.company)}</b></td><td>${esc(l.contact)}${l.email?`<br><span class="tag">${esc(l.email)}</span>`:''}</td><td>${esc(l.event)}</td><td>${esc(l.interest)}</td><td>${esc(l.owner)}</td><td>${esc(l.stage)}</td><td style="white-space:nowrap;${l.followup&&l.followup<TODAY&&!['Won','Lost'].includes(l.stage)?'color:var(--no);font-weight:700':''}">${fmtD(l.followup)}</td><td class="num">${money(num(l.value))}</td>${acts('leads',l.id)}</tr>`).join('')}</tbody></table>`:`<div class="empty">No individual leads logged${month!==null?' for this month':''} yet. Event-level lead counts live on each event; log named contacts here with <b>+ Add lead</b> or import a Leads sheet.</div>`;
+  $('#ldTable').innerHTML=ld.length?`<table class="stack"><thead><tr><th>Company</th><th>Contact</th><th>Event</th><th>Interest</th><th>Owner</th><th>Stage</th><th>Follow-up</th><th class="num">Value</th><th></th></tr></thead><tbody>${ld.map(l=>`<tr class="click" data-open="leads:${l.id}"><td><b>${hl(l.company)}</b></td><td>${esc(l.contact)}${l.email?`<br><span class="tag">${esc(l.email)}</span>`:''}</td><td>${esc(l.event)}</td><td>${esc(l.interest)}</td><td>${esc(l.owner)}</td><td>${esc(l.stage)}</td><td style="white-space:nowrap;${l.followup&&l.followup<TODAY&&!['Won','Lost'].includes(l.stage)?'color:var(--no);font-weight:700':''}">${fmtD(l.followup)}</td><td class="num">${money(num(l.value))}</td>${acts('leads',l.id)}</tr>`).join('')}</tbody></table>`:`<div class="empty">No individual leads logged${month!==null?' for this month':''} yet. Event-level lead counts live on each event; log named contacts here with <b>+ Add lead</b> or import a Leads sheet.</div>`;
 }
 
 /* ---------- forms ---------- */
@@ -355,6 +381,16 @@ async function exportXlsx(filtered){
   if(!dl){try{XLSX.writeFile(wb,name);toast('Excel downloaded')}catch(e){toast('Downloads are not available in this view')}return}
   try{await dl.save({filename:name,data:new Blob([buf])});toast('Excel saved')}catch(e){if(e?.code!=='declined')toast('Download failed: '+(e?.message||e?.code))}
 }
+async function downloadTemplate(){
+  let buf=null;try{const r=await fetch('template.xlsx',{cache:'no-store'});if(r.ok)buf=await r.arrayBuffer()}catch(e){}
+  if(!buf){if(!window.XLSX)return toast('Excel library did not load');const wb=XLSX.utils.book_new();
+    for(const c of ['events','travel','leads'])XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['ID',...SPEC[c].fields.map(f=>f[1].replace(' (comma separated)','').replace(' (as shown)',''))]]),sheetName[c]);
+    buf=XLSX.write(wb,{type:'array',bookType:'xlsx'})}
+  const name='iWave_Events_Template.xlsx';
+  const dl=await (window.claude?.use?.('downloads')??Promise.resolve(null)).catch(()=>null);
+  if(dl){try{await dl.save({filename:name,data:new Blob([buf])});toast('Template saved')}catch(e){if(e?.code!=='declined')toast('Download failed')}return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download=name;document.body.append(a);a.click();a.remove();toast('Template downloaded');
+}
 const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
 function fromRows(c,rows){
   const map={};for(const [k,l] of SPEC[c].fields){map[norm(l)]=k;map[norm(l.replace(/ \(.*\)/,''))]=k;map[norm(k)]=k}
@@ -404,7 +440,10 @@ document.addEventListener('click',e=>{
   const op=e.target.closest('[data-open]');if(op&&!e.target.closest('button')){const [c,id]=op.dataset.open.split(':');openForm(c,id)}
 });
 $('#q').addEventListener('input',render);
-['#fCat','#fPerson','#fTrip','#fStage'].forEach(s=>$(s).addEventListener('change',render));
+['#fCat','#fCountry','#fPerson','#fTrip','#fStage'].forEach(s=>$(s).addEventListener('change',render));
+$('#btnReset').addEventListener('click',()=>{$('#q').value='';['#fCat','#fCountry','#fPerson'].forEach(s=>$(s).value='');render();$('#q').focus()});
+document.addEventListener('keydown',e=>{if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)&&!dlg.open){e.preventDefault();$('#q').focus()}if(e.key==='Escape'&&document.activeElement===$('#q')){$('#q').value='';render()}});
+$('#btnTpl').addEventListener('click',downloadTemplate);
 $('#btnAdd').addEventListener('click',()=>{if(!canWrite)return toast('You have view-only access');openForm(tab==='overview'?'events':tab)});
 $('#btnImport').addEventListener('click',()=>{if(!canWrite)return toast('You have view-only access');$('#file').value='';$('#file').click()});
 $('#file').addEventListener('change',e=>{const f=e.target.files[0];if(f)handleFile(f)});
@@ -421,7 +460,7 @@ async function loadFile(){
     const wb=XLSX.read(await r.arrayBuffer(),{cellDates:true});const f={events:[],travel:[],leads:[]};
     for(const n of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[n],{defval:''});if(!rows.length)continue;const c=guess(n,rows);if(c)f[c].push(...fromRows(c,rows))}
     for(const c in f)S[c]=f[c].map((o,i)=>({...o,id:o.id||c[0]+'x'+i}));
-    local=true;canWrite=false;const lm=r.headers.get('last-modified');
+    local=true;fileMode=true;canWrite=false;const lm=r.headers.get('last-modified');
     const b=$('#mode');b.hidden=false;b.textContent='View only. Data comes from data.xlsx'+(lm?', last updated '+new Date(lm).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}):'')+'.';
     render();return true}catch(e){return false}
 }
